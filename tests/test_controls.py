@@ -366,8 +366,24 @@ class ControlTests(unittest.TestCase):
         self.assertTrue(all('123456789012' not in hit.quote for hit in hits))
         self.assertEqual(mask_account_numbers('invoice INV-7731-0418-92'),
                          'invoice INV-7731-0418-92')
-        # Letter case is not a disguise: the lower-case IBAN is the same account.
-        self.assertEqual(mask_account_numbers('iban gb82west12345698765432.'), 'iban ****5432.')
-        self.assertEqual(mask_account_numbers('IBAN Gb82 WeSt 1234 5698 7654 32'), 'IBAN ****5432')
-        self.assertTrue(contains_iban('gb82west12345698765432'))
-        self.assertFalse(contains_iban('order gb82 for west 1234'))
+        # A real account passes the IBAN check, so letter case, grouping and a glued label are no disguise.
+        for spelled in ('gb82west12345698765432', 'Gb82 WeSt 1234 5698 7654 32', 'IBANGB82WEST12345698765432',
+                        'IBAN_GB82WEST12345698765432', 'GB82-WEST-1234-5698-7654-32', 'GB82\tWEST\t1234\t5698\t7654\t32',
+                        'GB82\nWEST 1234 5698\n7654 32', 'GB 82 WEST 1234 5698 7654 32', 'de00 0000 0000 0000 0000 00'):
+            with self.subTest(spelled=spelled):
+                self.assertTrue(contains_iban(spelled))
+                masked = mask_account_numbers(f'Remit to {spelled} please.')
+                self.assertNotIn('5698', masked, masked)
+                self.assertNotIn('0000 0000', masked, masked)
+                self.assertRegex(masked, r'Remit to \S*\*\*\*\*\w{4} please\.')
+        # A currency code glued to the end is still the same account.
+        self.assertEqual(mask_account_numbers('GB82WEST12345698765432EUR'), '****5432EUR')
+        self.assertTrue(contains_iban('GB82WEST12345698765432EUR'))
+        # Ordinary text, hashes and reference numbers that only start like an account are not accounts.
+        untouched = ('Deliver to unit ab12 main road east.', 'quote gb82 for west 1234 today', 'Portal document id PX7K-4M82-QD9R',
+                     'FR12345678901', 'ba7280d1180aa557c32d05baa3e64c0eb', 'ad42022d73ceda1c1cbf1f451bd4d0d649')
+        for plain in (*untouched, 'PO 4500219846 line 10', 'db-4502-4007-b561-1c1ef125484a'):
+            with self.subTest(plain=plain):
+                self.assertFalse(contains_iban(plain), plain)
+                if plain in untouched:
+                    self.assertEqual(mask_account_numbers(plain), plain)

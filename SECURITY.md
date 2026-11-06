@@ -47,7 +47,7 @@ The full list is in [docs/06-threat-model.md](docs/06-threat-model.md), where T-
 ## Data handling
 
 - Real invoices do not belong in this repo. Add labelled cases from described, anonymized shapes only.
-- Account numbers in extracted fields and flag quotes are masked to the last four characters before results are written, and the writer refuses to commit any output that contains a full IBAN. Masking is pattern based (IBAN shapes in any letter case, and long digit runs), so an account number in another shape can pass.
+- Account numbers in extracted fields and flag quotes are masked to the last four characters before results are written, and the writer refuses to commit any output that contains a full IBAN. Masking recognizes an IBAN by its registered country code and exact length (any letter case or grouping; the check digits are verified when the account is glued to a label or a currency code) and masks runs of eight or more digits, so an account number in another shape can pass.
 - Traces hold digests, not raw bodies. Extracted quotes are capped in length.
 - A future live reader would send the invoice image to a model endpoint. Approve the provider, region, retention terms and allowed data before enabling it; the sandbox makes no such call.
 
