@@ -28,7 +28,7 @@ The full list is in [docs/06-threat-model.md](docs/06-threat-model.md), where T-
 |---|---|---|
 | Deny by default tool policy, hook and settings allowlist; the hook has an automated test | `policy/tool-policy.yaml`, `.claude/settings.json`, `.claude/hooks/pre-tool-use.py`, `tests/test_hardening.py` | T-8, T-22, T-23 |
 | The three ERP write tools denied in every environment | `policy/tool-policy.yaml`, `integration/agent-tools.yaml` | T-22 |
-| Invoice text handled as data, reader without tools; the guard strips default-ignorable, format and combining characters, normalizes Unicode and folds Cyrillic and Greek look-alike letters before it matches instruction, bank-change and remit-to patterns. It is a keyword heuristic for common English phrasings, not a general detector | `src/invoice_agent/extract.py`, `src/invoice_agent/guard.py`, `schemas/extraction.json` | T-4 |
+| Invoice text handled as data, reader without tools; the guard reads default-ignorable, format, non-whitespace control, combining and enclosing characters both as removed and as spaces, normalizes Unicode (a ligature expands to its letters) and folds Cyrillic, Greek and small-capital look-alike letters before it matches instruction, bank-change and remit-to patterns. It is a keyword heuristic for common English phrasings, not a general detector | `src/invoice_agent/extract.py`, `src/invoice_agent/guard.py`, `schemas/extraction.json` | T-4 |
 | Supplier name and company code compared with the supplier record through one shared normalizer; a changed legal form routes to a person | `src/invoice_agent/decide.py`, `src/invoice_agent/propose.py` | T-1 |
 | For a `.txt` source every field quote must be non-empty and occur in the source, and the value must lie inside its quote, or the invoice is quarantined; PDF and image quotes are bound by hash only | `src/invoice_agent/extract.py` | T-6 |
 | Fixed query ids, no model written query text | `integration/agent-tools.yaml` | T-7 |
@@ -47,7 +47,7 @@ The full list is in [docs/06-threat-model.md](docs/06-threat-model.md), where T-
 ## Data handling
 
 - Real invoices do not belong in this repo. Add labelled cases from described, anonymized shapes only.
-- Account numbers in extracted fields and flag quotes are masked to the last four characters before results are written, and the writer refuses to commit any output that contains a full IBAN. Masking recognizes an IBAN by its registered country code and exact length (any letter case or grouping; the check digits are verified when the account is glued to a label or a currency code) and masks runs of eight or more digits, so an account number in another shape can pass.
+- Account numbers in extracted fields and flag quotes are masked to the last four characters before results are written, and the writer refuses to commit any output that contains a full IBAN. Masking recognizes an IBAN by its registered country code and exact length (any letter case, at most one separator between characters; the check digits are verified when the account is glued to a label, a currency code or a longer token) and masks runs of eight or more digits, so an account number in another shape can pass.
 - Traces hold digests, not raw bodies. Extracted quotes are capped in length.
 - A future live reader would send the invoice image to a model endpoint. Approve the provider, region, retention terms and allowed data before enabling it; the sandbox makes no such call.
 

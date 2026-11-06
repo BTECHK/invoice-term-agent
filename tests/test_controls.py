@@ -369,7 +369,9 @@ class ControlTests(unittest.TestCase):
         # A real account passes the IBAN check, so letter case, grouping and a glued label are no disguise.
         for spelled in ('gb82west12345698765432', 'Gb82 WeSt 1234 5698 7654 32', 'IBANGB82WEST12345698765432',
                         'IBAN_GB82WEST12345698765432', 'GB82-WEST-1234-5698-7654-32', 'GB82\tWEST\t1234\t5698\t7654\t32',
-                        'GB82\nWEST 1234 5698\n7654 32', 'GB 82 WEST 1234 5698 7654 32', 'de00 0000 0000 0000 0000 00'):
+                        'GB82\nWEST 1234 5698\n7654 32', 'GB 82 WEST 1234 5698 7654 32', 'de00 0000 0000 0000 0000 00',
+                        'G B82WEST12345698765432', 'GB8 2WEST12345698765432', 'GB\n82WEST12345698765432',
+                        'G.B.8.2.W.E.S.T.1.2.3.4.5.6.9.8.7.6.5.4.3.2', 'GB82WE\rST12345698765432', 'ref-GB82WEST12345698765432'):
             with self.subTest(spelled=spelled):
                 self.assertTrue(contains_iban(spelled))
                 masked = mask_account_numbers(f'Remit to {spelled} please.')
@@ -381,8 +383,9 @@ class ControlTests(unittest.TestCase):
         self.assertTrue(contains_iban('GB82WEST12345698765432EUR'))
         # Ordinary text, hashes and reference numbers that only start like an account are not accounts.
         untouched = ('Deliver to unit ab12 main road east.', 'quote gb82 for west 1234 today', 'Portal document id PX7K-4M82-QD9R',
-                     'FR12345678901', 'ba7280d1180aa557c32d05baa3e64c0eb', 'ad42022d73ceda1c1cbf1f451bd4d0d649')
-        for plain in (*untouched, 'PO 4500219846 line 10', 'db-4502-4007-b561-1c1ef125484a'):
+                     'FR12345678901', 'ba7280d1180aa557c32d05baa3e64c0eb', 'ad42022d73ceda1c1cbf1f451bd4d0d649',
+                     'b95090a6-f793-4d7e-be13-bb6b00855d27', 'Tax ID 12/345/67890', 'lot 12-34-56')
+        for plain in (*untouched, 'PO 4500219846 line 10', 'db-4502-4007-b561-1c1ef125484a', '550e8400-e29b-41d4-a716-446655440000'):
             with self.subTest(plain=plain):
                 self.assertFalse(contains_iban(plain), plain)
                 if plain in untouched:

@@ -55,13 +55,15 @@ _IBAN_LENGTHS = {
     "YE": 30,
 }
 # Where an account may start, in any letter case, and how far its characters may run with one common separator
-# between any two of them. Starts are found with a lookahead so that one run cannot swallow an account that
-# begins inside it.
-_IBAN_START = re.compile(r"(?=([A-Z]{2})[ \t.-]?\d{2})", re.I)
-_IBAN_RUN = re.compile(r"[A-Z]{2}[ \t.-]?\d{2}(?:[ \t\n.-]?[A-Z0-9]){11,30}", re.I)
+# between any two of them, the first four included. Starts are found with a lookahead so that one run cannot
+# swallow an account that begins inside it.
+_SEPARATOR = r"[ \t\n\r.-]"
+_IBAN_START = re.compile(rf"(?=([A-Z]){_SEPARATOR}?([A-Z]){_SEPARATOR}?\d{_SEPARATOR}?\d)", re.I)
+_IBAN_RUN = re.compile(rf"[A-Z]{_SEPARATOR}?[A-Z]{_SEPARATOR}?\d{_SEPARATOR}?\d(?:{_SEPARATOR}?[A-Z0-9]){{11,30}}", re.I)
 # What may follow an account inside its token: nothing, or up to three letters such as a currency code.
 _IBAN_TAIL = re.compile(r"[A-Z]{0,3}(?![A-Z0-9])", re.I)
-_LONG_NUMBER = re.compile(r"\bINV-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b|\b\d[\d -]{6,}\d\b")
+# Eight or more digits, with at most one space or hyphen between any two; an invoice id of the INV- form survives.
+_LONG_NUMBER = re.compile(r"\bINV-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b|\b\d(?:[ -]?\d){7,}\b")
 # Letters that look like a Latin letter, as code point to the letter they imitate: Cyrillic, Greek, then the
 # small capitals of the phonetic blocks, which compatibility normalization leaves alone.
 _LOOK_ALIKES = {
@@ -176,13 +178,13 @@ def _ibans(view: str) -> list[tuple[int, int]]:
 
     A span needs a registered country code and that country's exact length, and its token must end there or
     after at most three more letters (a currency code). One that stands alone counts as it is, placeholder
-    check digits included. One glued to a label in front (IBANGB82...) or to letters behind (...32EUR) must
-    also pass the check digits, so a hash or a reference number that happens to start like an account is left
-    alone.
+    check digits included. One glued to a label in front (IBANGB82...), to letters behind (...32EUR) or to a
+    longer dotted or hyphenated token (the tail of a UUID) must also pass the check digits, so a hash or a
+    reference number that happens to start like an account is left alone.
     """
     spans: list[tuple[int, int]] = []
     for start in _IBAN_START.finditer(view):
-        length = _IBAN_LENGTHS.get(start.group(1).upper())
+        length = _IBAN_LENGTHS.get((start.group(1) + start.group(2)).upper())
         run = _IBAN_RUN.match(view, start.start()) if length else None
         if run is None:
             continue
@@ -198,8 +200,9 @@ def _ibans(view: str) -> list[tuple[int, int]]:
         tail = _IBAN_TAIL.match(view, end)
         if tail is None:
             continue
-        glued_left = run.start() > 0 and view[run.start() - 1].isalnum()
-        glued_right = tail.end() > end
+        before, after = view[:run.start()], view[tail.end():]
+        glued_left = bool(before) and (before[-1].isalnum() or (before[-1] in ".-" and before[-2:-1].isalnum()))
+        glued_right = tail.end() > end or (after[:1] in (".", "-") and after[1:2].isalnum())
         if glued_left and glued_right:
             continue
         if (glued_left or glued_right) and not _check_digits_ok("".join(compact[:length])):
