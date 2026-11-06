@@ -42,7 +42,8 @@ _PATTERNS: dict[str, tuple[str, str]] = {
         r"\b(?:remit[- ]to|remittance|pay to the order of)\b.{0,40}\b(?:new|replacement|updated|different|other)\b",
     ),
 }
-_IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,4})?\b")
+# Any letter case: the text is untrusted, and a lower-case IBAN is still an account.
+_IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,4})?\b", re.I)
 _LONG_NUMBER = re.compile(r"\bINV-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*\b|\b\d[\d -]{6,}\d\b")
 # Letters that look like a Latin letter, as code point to the letter they imitate (Cyrillic, then Greek).
 _LOOK_ALIKES = {
@@ -65,13 +66,10 @@ class _Fold(dict):
     """A str.translate table: one character to one character, worked out the first time it is seen.
 
     The NFKC form counts only when it is a single character, so the folded text keeps the length of
-    the text it is applied to. A zero width space reads as a space.
+    the text it is applied to.
     """
 
     def __missing__(self, code_point: int) -> str:
-        if code_point == 0x200B:
-            self[code_point] = " "
-            return " "
         char = chr(code_point)
         normal = unicodedata.normalize("NFKC", char)
         char = normal if len(normal) == 1 else char
@@ -90,7 +88,7 @@ class Hit:
 
 def _unseen(char: str) -> bool:
     """A character a reader does not see or that only decorates the letter before it."""
-    return char != "\u200b" and (unicodedata.category(char) in ("Cf", "Mn") or ord(char) in _IGNORABLE)
+    return unicodedata.category(char) in ("Cf", "Mn") or ord(char) in _IGNORABLE
 
 
 @dataclass(frozen=True)
@@ -99,24 +97,33 @@ class _Readable:
 
     text: str
     removed_before: tuple[int, ...]
+    # Set when unseen characters were removed: a word boundary may then be an artefact of the removal.
+    loose: bool = False
 
     def original(self, position: int) -> int:
         return position + bisect_right(self.removed_before, position)
 
 
-def _readable(text: str) -> _Readable:
-    """Remove soft hyphens, joiners, marks and other unseen characters, then fold look-alikes.
+def _views(text: str) -> tuple[_Readable, ...]:
+    """The text as a reader sees it: unseen characters removed, and again with each read as a space.
 
-    Unseen characters leave the text, so a match position maps back to the original through the
-    positions removed before it. Folding keeps the length.
+    A zero width space inside a word hides the word unless it is removed; one between two words hides
+    the gap unless it is read as a space. Patterns run on both forms. Removal shifts positions, so that
+    form keeps a map back to the original through the positions removed before each one; the spaced
+    form and the folding keep the length.
     """
     if text.isascii():
-        return _Readable(text, ())
+        return (_Readable(text, ()),)
     removed = [m.start() for m in _NON_ASCII.finditer(text) if _unseen(m.group())]
-    if removed:
-        cuts = [*removed, len(text)]
-        text = "".join(text[after:before] for after, before in zip([0, *(i + 1 for i in removed)], cuts))
-    return _Readable(fold_look_alikes(text), tuple(i - k for k, i in enumerate(removed)))
+    if not removed:
+        return (_Readable(fold_look_alikes(text), ()),)
+    cuts = [*removed, len(text)]
+    stripped = "".join(text[after:before] for after, before in zip([0, *(i + 1 for i in removed)], cuts))
+    spaced = list(text)
+    for position in removed:
+        spaced[position] = " "
+    return (_Readable(fold_look_alikes(stripped), tuple(i - k for k, i in enumerate(removed)), loose=True),
+            _Readable(fold_look_alikes("".join(spaced)), ()))
 
 
 def _original_span(readable: _Readable, start: int, end: int) -> tuple[int, int]:
@@ -126,25 +133,32 @@ def _original_span(readable: _Readable, start: int, end: int) -> tuple[int, int]
 def mask_account_numbers(text: str) -> str:
     """Keep at most the last four characters of an account or card number.
 
-    Numbers are found in the readable form, so a zero width character or a no-break space inside one
-    does not hide it. The replacement is cut from the original text.
+    Numbers are found in the readable forms, so a zero width character or a no-break space inside one
+    does not hide it, and the letter case of an IBAN does not matter. The replacement covers the span
+    of the original text.
     """
-    readable = _readable(text)
-    view = readable.text
-    found = [(*_original_span(readable, m.start(), m.end()), "****" + re.sub(r"\s", "", m.group())[-4:])
-             for m in _IBAN.finditer(view)]
-    # Numbers inside an IBAN are already masked: blank it so the long number pass cannot match them again.
-    rest = _IBAN.sub(lambda m: "*" * len(m.group()), view)
-    found += [(*_original_span(readable, m.start(), m.end()), "****" + re.sub(r"\D", "", m.group())[-4:])
-              for m in _LONG_NUMBER.finditer(rest) if not m.group().startswith("INV-")]
-    for start, end, mask in sorted(found, reverse=True):
+    found: set[tuple[int, int, str]] = set()
+    for readable in _views(text):
+        view = readable.text
+        found.update((*_original_span(readable, m.start(), m.end()), "****" + re.sub(r"\s", "", m.group())[-4:])
+                     for m in _IBAN.finditer(view))
+        # Numbers inside an IBAN are already masked: blank it so the long number pass cannot match them again.
+        rest = _IBAN.sub(lambda m: "*" * len(m.group()), view)
+        found.update((*_original_span(readable, m.start(), m.end()), "****" + re.sub(r"\D", "", m.group())[-4:])
+                     for m in _LONG_NUMBER.finditer(rest) if not m.group().startswith("INV-"))
+    # The two forms usually find the same spans; where they overlap, the earlier and longer one wins.
+    chosen: list[tuple[int, int, str]] = []
+    for span in sorted(found, key=lambda s: (s[0], s[0] - s[1])):
+        if not chosen or span[0] >= chosen[-1][1]:
+            chosen.append(span)
+    for start, end, mask in reversed(chosen):
         text = text[:start] + mask + text[end:]
     return text
 
 
 def contains_iban(text: str) -> bool:
-    """True when the readable form of the text holds a full IBAN. Only the IBAN shape counts, never a plain digit run."""
-    return _IBAN.search(_readable(text).text) is not None
+    """True when a readable form of the text holds a full IBAN. Only the IBAN shape counts, never a plain digit run."""
+    return any(_IBAN.search(readable.text) for readable in _views(text))
 
 
 def _sentence_around(text: str, start: int, end: int) -> str:
@@ -162,17 +176,20 @@ def fold_look_alikes(text: str) -> str:
 def scan_text(text: str) -> list[Hit]:
     """Find instruction-like spans. Each hit quotes the sentence, with account numbers masked.
 
-    Patterns run on the readable form of the text; the quote is cut from the original at the mapped
-    positions, so it shows what the sender wrote, invisible characters included.
+    Patterns run on the readable forms of the text; the quote is cut from the original at the mapped
+    positions, so it shows what the sender wrote, invisible characters included. Text that carried
+    invisible characters is matched without word boundaries, since removing a zero width space can
+    glue two words together just as reading one as a space can split a word.
     """
     hits: list[Hit] = []
     seen: set[tuple[str, str]] = set()
-    readable = _readable(text)
-    for _, (flag_type, pattern) in _PATTERNS.items():
-        for m in re.finditer(pattern, readable.text, re.I | re.S):
-            quote = mask_account_numbers(_sentence_around(text, *_original_span(readable, m.start(), m.end())))[:240]
-            key = (flag_type, quote)
-            if key not in seen:
-                seen.add(key)
-                hits.append(Hit(flag_type, quote))
+    for readable in _views(text):
+        for _, (flag_type, pattern) in _PATTERNS.items():
+            expression = pattern.replace(r"\b", "") if readable.loose else pattern
+            for m in re.finditer(expression, readable.text, re.I | re.S):
+                quote = mask_account_numbers(_sentence_around(text, *_original_span(readable, m.start(), m.end())))[:240]
+                key = (flag_type, quote)
+                if key not in seen:
+                    seen.add(key)
+                    hits.append(Hit(flag_type, quote))
     return hits

@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from tests.support import ROOT, SYNTHETIC, read_json
 from invoice_agent.erp_client import ErpClient, ErpClientError, QueryValidationError, ThrottleExceeded, ToolDeniedError
-from invoice_agent.guard import mask_account_numbers
+from invoice_agent.guard import contains_iban, mask_account_numbers
 from invoice_agent.models import Extraction, Proposal, WorklistRecord
 from invoice_agent.policy import Policy, load_policy
 from invoice_agent.propose import apply_checker, check_proposal
@@ -366,3 +366,8 @@ class ControlTests(unittest.TestCase):
         self.assertTrue(all('123456789012' not in hit.quote for hit in hits))
         self.assertEqual(mask_account_numbers('invoice INV-7731-0418-92'),
                          'invoice INV-7731-0418-92')
+        # Letter case is not a disguise: the lower-case IBAN is the same account.
+        self.assertEqual(mask_account_numbers('iban gb82west12345698765432.'), 'iban ****5432.')
+        self.assertEqual(mask_account_numbers('IBAN Gb82 WeSt 1234 5698 7654 32'), 'IBAN ****5432')
+        self.assertTrue(contains_iban('gb82west12345698765432'))
+        self.assertFalse(contains_iban('order gb82 for west 1234'))

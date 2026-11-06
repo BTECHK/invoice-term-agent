@@ -30,10 +30,10 @@ Expected payment outcomes are explicit constants, not computed by the runtime un
 - Look-alike Cyrillic letters, a declarative remit-to change and a moved treasury account are flagged; benign payment text is not.
 - A field quote absent from a `.txt` source quarantines the invoice; the untouched case is written.
 - Crafted events piped into the PreToolUse hook are denied: a write tool, a secrets read (including `.ENV`, `.env.staging` and `.envrc`), a protected-path write in any letter case, a write outside the allowed paths, a server alias and malformed input; an allowed read passes through; development mode keeps the write tools, the nested model and the hook log denied.
-- Zero-width, soft-hyphen and combining characters inside an instruction are flagged, and the quote is cut from the original text.
+- Zero-width, soft-hyphen and combining characters inside an instruction, between its words or both are flagged, and the quote is cut from the original text.
 - A legal form wrapped in punctuation or invisible characters still counts; long spellings equal their short forms.
 - `scripts/check.py` reports a settings file without the hook, a missing deny entry and a subagent whose tools exceed its role.
-- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN.
+- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN in any letter case.
 - A null quote, or a value absent from its own quote, quarantines a `.txt` case; a transcript directory with an unsafe name is quarantined and the batch continues.
 - An undeclared query id or a bad variable is rejected client-side before any call; a client ceiling above 1000 calls a minute is refused.
 
