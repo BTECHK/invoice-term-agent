@@ -33,7 +33,7 @@ _PATTERNS: dict[str, tuple[str, str]] = {
     ),
     "urgent_payment": (
         "urgent_payment_request",
-        r"\bpay\b.{0,50}\b(?:immediately|right away|today|urgently|now|without delay)\b"
+        r"\bpay(?:ing)?\b.{0,50}\b(?:immediately|right away|today|urgently|now|without delay)\b"
         r"|\b(?:immediately|urgently|today|now)\b.{0,10}\bpay\b",
     ),
     "pay_to_account": (
@@ -42,11 +42,15 @@ _PATTERNS: dict[str, tuple[str, str]] = {
     ),
     "bank_change": (
         "bank_or_remit_to_change",
+        # "new" or "changed" near a banking noun. A bare "account" or "bank" needs banking context ("new account
+        # manager" and "a new bank of cabinets" are ordinary English) or an account number nearby.
         r"\b(?:new|changed?|updated?|different|replacement|moved|relocated|transferred)\b.{0,35}"
-        r"\b(?:bank\w*|account|iban|remit\w*|payee|recipient|treasury|settlement)\b"
-        r"|\b(?:bank\w*|account|iban|remit\w*|payee|recipient|treasury|settlement)\b.{0,35}"
+        r"\b(?:bank(?:ing)? (?:details?|account|name|transfer details)|account (?:number|no\.?|details?|holder)"
+        r"|iban|remit\w*|payee|recipient|beneficiary|treasury|settlement)\b"
+        r"|\b(?:new|changed?|updated?|different|replacement)\b.{0,35}\b(?:account|bank)\b.{0,40}" + _ACCOUNT +
+        r"|\b(?:bank\w*|account|iban|remit\w*|payee|recipient|beneficiary|treasury|settlement)\b.{0,35}"
         r"\b(?:replacement|moved|relocated|transferred|chang\w*|updat\w*)\b"
-        r"|\b(?:bank\w*|remit\w*|payee)\b.{0,30}\b(?:details?|account|address)\b.{0,25}\b(?:chang\w*|updat\w*)\b",
+        r"|\b(?:bank\w*|remit\w*|payee)\b.{0,30}\b(?:details?|account|address)\b.{0,25}\b(?:chang\w*|updat\w*|new|different)\b",
     ),
     "remit_to_change": (
         "bank_or_remit_to_change",
@@ -261,9 +265,9 @@ def _check_digits_ok(compact: str) -> bool:
 def _ibans(view: str) -> list[tuple[int, int]]:
     """Spans of accounts in a readable form.
 
-    A span needs a registered country code and that country's exact length, and its token must end there or
-    after at most three more letters (a currency code). One that stands alone, printed as one block or in the
-    usual groups of four, counts as it is, placeholder check digits included. One glued to a label in front
+    A span needs a registered country code and that country's exact length, at least five digits in its body,
+    and its token must end there or after at most three more letters (a currency code). One that stands alone,
+    printed as one block or in the usual groups of four, counts as it is, placeholder check digits included. One glued to a label in front
     (IBANGB82...), to letters behind (...32EUR) or to a longer dotted or hyphenated token (the tail of a UUID),
     or one printed in any other grouping, must also pass the check digits, so a hash, a reference number or a
     run of short words that happens to have the shape of an account is left alone.
@@ -290,6 +294,10 @@ def _ibans(view: str) -> list[tuple[int, int]]:
         glued_left = bool(before) and (before[-1].isalnum() or (before[-1] in ".-" and before[-2:-1].isalnum()))
         glued_right = tail.end() > end or (after[:1] in (".", "-") and after[1:2].isalnum())
         if glued_left and glued_right:
+            continue
+        # The body of a real account carries an account number: fewer than five digits after the check digits is
+        # prose ("so 23 euros are still unpaid" has the shape and the check digits of a Somali account).
+        if sum(char.isdigit() for char in compact[4:length]) < 5:
             continue
         groups = _GROUP_SPLIT.split(view[run.start():end])
         conventional = len(groups) == 1 or (all(len(g) == 4 for g in groups[:-1]) and 1 <= len(groups[-1]) <= 4)
@@ -356,7 +364,7 @@ _REWRITES: tuple[tuple[re.Pattern[str], object], ...] = (
     (re.compile(r"(?<=[A-Za-z])[-_·.](?=[A-Za-z])"), " "),                    # do-not-flag, ignore_previous_rules
     (re.compile(r"\b(?:[A-Za-z] ){3,}[A-Za-z]\b"), lambda m: m.group().replace(" ", "")),  # l e t t e r spacing
     (re.compile(r"\s+"), " "),                                                 # any gap is one space
-    (re.compile(r"(?<=[A-Za-z])[01345678@$|](?=[A-Za-z])"), lambda m: _LEET[m.group()]),  # ign0re, f|ag
+    (re.compile(r"(?<=[A-Za-z])[0134578@$|](?=[A-Za-z])"), lambda m: _LEET[m.group()]),  # ign0re, f|ag
 )
 
 

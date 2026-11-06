@@ -1,6 +1,6 @@
 # Essential tests
 
-`make test` runs 69 behavior tests in three files: 13 workflow tests, 15 control tests and 41 hardening tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains.
+`make test` runs 70 behavior tests in three files: 13 workflow tests, 15 control tests and 42 hardening tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains.
 
 ## Keep
 
