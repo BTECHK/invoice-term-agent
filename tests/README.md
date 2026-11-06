@@ -1,6 +1,6 @@
 # Essential tests
 
-`make test` runs 67 behavior tests in three files: 13 workflow tests, 15 control tests and 39 hardening tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains.
+`make test` runs 69 behavior tests in three files: 13 workflow tests, 15 control tests and 41 hardening tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains.
 
 ## Keep
 
@@ -30,10 +30,10 @@ Expected payment outcomes are explicit constants, not computed by the runtime un
 - Look-alike Cyrillic letters, a declarative remit-to change and a moved treasury account are flagged; benign payment text is not.
 - A field quote absent from a `.txt` source quarantines the invoice; the untouched case is written.
 - Crafted events piped into the PreToolUse hook are denied: a write tool, a secrets read (including `.ENV`, `.env.staging` and `.envrc`), a protected-path write in any letter case, a write outside the allowed paths, a server alias and malformed input; an allowed read passes through; development mode keeps the write tools, the nested model and the hook log denied.
-- Zero-width, soft-hyphen, combining and enclosing characters, a ligature, small capitals and control characters inside an instruction, between its words or both are flagged in the tested spellings, and the quote is cut from the original text.
+- Zero-width, soft-hyphen, combining and enclosing characters, a ligature, small capitals and control characters inside an instruction, between its words or both are flagged in the tested spellings, and the quote is cut from the original text. Layout variants (line wraps, double spaces, curly apostrophes, joined words, letter spacing, digits for letters, a long account or amount inside the keyword window, inflected verbs, either word order) and look-alike letters from six scripts are flagged in the tested spellings; the sample invoices' own wording is not.
 - A legal form wrapped in punctuation or invisible characters still counts; long spellings equal their short forms.
 - `scripts/check.py` reports a settings file without the hook, a missing deny entry and a subagent whose tools exceed its role.
-- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN in any letter case, with any single separator, or glued to a label (check digits verified when glued); the tested hashes, UUID segments and reference numbers that only start like an account are left alone, though a token with a registered length and valid check digits would count as an account.
+- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN in any letter case, in groups of four or in any grouping that passes the check digits, or glued to a label; the tested hashes, UUID segments and reference numbers that only start like an account are left alone, though a token with a registered length and valid check digits would count as an account.
 - A null quote, or a value absent from its own quote, quarantines a `.txt` case; a transcript directory with an unsafe name is quarantined and the batch continues.
 - An undeclared query id or a bad variable is rejected client-side before any call; a client ceiling above 1000 calls a minute is refused.
 
