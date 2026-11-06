@@ -215,8 +215,8 @@ def mask_account_numbers(text: str) -> str:
     """Keep at most the last four characters of an account or card number.
 
     Numbers are found in the readable forms, so a zero width character or a no-break space inside one
-    does not hide it, and an IBAN is found in any letter case, with any grouping and even glued to the end
-    of a label. The replacement covers the span of the original text.
+    does not hide it, and an IBAN is found in any letter case, with one separator between any two characters,
+    and even glued to a label. The replacement covers the span of the original text.
     """
     found: set[tuple[int, int, str]] = set()
     for readable in _views(text):

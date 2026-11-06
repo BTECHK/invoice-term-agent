@@ -33,7 +33,7 @@ Expected payment outcomes are explicit constants, not computed by the runtime un
 - Zero-width, soft-hyphen, combining and enclosing characters, a ligature, small capitals and control characters inside an instruction, between its words or both are flagged in the tested spellings, and the quote is cut from the original text.
 - A legal form wrapped in punctuation or invisible characters still counts; long spellings equal their short forms.
 - `scripts/check.py` reports a settings file without the hook, a missing deny entry and a subagent whose tools exceed its role.
-- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN in any letter case, with any single separator, or glued to a label; hashes, UUID segments and reference numbers that only start like an account are left alone.
+- An IBAN in an extracted free-text field is masked in every output while the PO reference survives; the writer refuses output carrying a full IBAN in any letter case, with any single separator, or glued to a label (check digits verified when glued); the tested hashes, UUID segments and reference numbers that only start like an account are left alone, though a token with a registered length and valid check digits would count as an account.
 - A null quote, or a value absent from its own quote, quarantines a `.txt` case; a transcript directory with an unsafe name is quarantined and the batch continues.
 - An undeclared query id or a bad variable is rejected client-side before any call; a client ceiling above 1000 calls a minute is refused.
 
