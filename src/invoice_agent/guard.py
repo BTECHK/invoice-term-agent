@@ -270,7 +270,8 @@ def _ibans(view: str) -> list[tuple[int, int]]:
     printed as one block or in the usual groups of four, counts as it is, placeholder check digits included. One glued to a label in front
     (IBANGB82...), to letters behind (...32EUR) or to a longer dotted or hyphenated token (the tail of a UUID),
     or one printed in any other grouping, must also pass the check digits, so a hash, a reference number or a
-    run of short words that happens to have the shape of an account is left alone.
+    run of short words that happens to have the shape of an account is left alone unless it also passes the
+    check digits by coincidence (about one in a hundred of the shapes that get this far).
     """
     spans: list[tuple[int, int]] = []
     for start in _IBAN_START.finditer(view):
