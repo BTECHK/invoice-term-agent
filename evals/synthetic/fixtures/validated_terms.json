@@ -1,0 +1,10 @@
+{
+  "description": "Synthetic validated terms for successful rule paths.",
+  "records": [
+    {"vendor": "V13588", "company_code": "3000", "term_days": 50, "discount_percent": null, "discount_days": null, "express_agreement": false, "validated_by_role": "Procurement", "validated_on": "2025-05-12"},
+    {"vendor": "V14272", "company_code": "3000", "term_days": 40, "discount_percent": 1.5, "discount_days": 10, "express_agreement": false, "validated_by_role": "Procurement", "validated_on": "2025-05-12"},
+    {"vendor": "V15346", "company_code": "3000", "term_days": 55, "discount_percent": 0.5, "discount_days": 10, "express_agreement": false, "validated_by_role": "Procurement", "validated_on": "2025-05-12"},
+    {"vendor": "V31204", "company_code": "3000", "term_days": 35, "discount_percent": 1.5, "discount_days": 10, "express_agreement": false, "validated_by_role": "Procurement", "validated_on": "2025-05-12"},
+    {"vendor": "V16789", "company_code": "3000", "term_days": 80, "discount_percent": null, "discount_days": null, "express_agreement": false, "validated_by_role": "Procurement", "validated_on": "2025-05-12"}
+  ]
+}

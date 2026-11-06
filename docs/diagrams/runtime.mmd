@@ -1,0 +1,14 @@
+flowchart TD
+  IN[Extraction transcript + source document] --> R
+  subgraph R[Python runner: one process]
+    L[Replay loader and validator] --> D[Rules and proposal]
+    D --> C[Separate checker implementation]
+    C --> E[Exception resolver when held]
+    C --> W[Bundle writer: lock, journal, idempotency]
+    E --> W
+  end
+  D <-->|Fixed queries via adapter| M
+  C <-->|Re-query via adapter| M
+  E <-->|Declared evidence queries| M
+  M[Mock ERP data service: MCP over stdio] <--> Y[Fixtures + tool allowlist; writes refused]
+  W --> O[Proposals, worklist records, audit events, run summary]

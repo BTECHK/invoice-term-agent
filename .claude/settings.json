@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__erp__run_query",
+      "mcp__erp__get_data_catalog",
+      "mcp__erp__search_records",
+      "mcp__erp__get_kpis",
+      "mcp__erp__get_event_timeline"
+    ],
+    "deny": [
+      "mcp__erp__trigger_erp_action",
+      "mcp__erp__start_workflow",
+      "mcp__erp__resume_workflow",
+      "mcp__erp__call_assistant_model"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-tool-use.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

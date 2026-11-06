@@ -1,0 +1,13 @@
+{
+  "metadata": {"source_sha256": "0dc45c224fb6de797eba24a5f04b952e1dfaa6582419badaa2fb12ca29149d03", "role": "extractor", "mode": "curated_synthetic", "schema_version": 1, "prompt_version": 1, "rule_version": "1.0.0", "source_path": "evals/synthetic/inputs/SYN-EQUAL-001.txt", "provenance_note": "Purpose-built synthetic clear case. Confidence is fixture confidence, not model confidence."},
+  "response": {
+    "invoice_id": {"value": "SYN-EQUAL-001", "page": 1, "quote": "Invoice #: SYN-EQUAL-001", "confidence": 0.99},
+    "vendor_name": {"value": "Larkspur Tube & Core B.V.", "page": 1, "quote": "Vendor: Larkspur Tube & Core B.V.", "confidence": 0.99},
+    "vendor_address": {"value": "Kanaalweg 14, 3526 KL Utrecht, Netherlands", "page": 1, "quote": "Address: Kanaalweg 14, 3526 KL Utrecht, Netherlands", "confidence": 0.99},
+    "payment_terms": {"value": "Net 30 Days", "page": 1, "quote": "Payment Terms: Net 30 Days", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 1284.50", "page": 1, "quote": "Total: EUR 1284.50", "confidence": 0.99},
+    "company_code": {"value": "3000", "page": 1, "quote": "Company code: 3000", "confidence": 0.99},
+    "po_reference": {"value": "4500391102", "page": 1, "quote": "PO Reference: 4500391102", "confidence": 0.99},
+    "flags": []
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invoice-term-agent:schema:audit-event:1",
+  "title": "Audit event",
+  "description": "One line of the append-only audit trace: one tool call by one role for one invoice, allowed or denied. Inputs and outputs are stored as SHA-256 hashes, never as text, so the trace holds no invoice content or bank detail.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "invoice_id",
+    "role",
+    "tool",
+    "allowed",
+    "input_hash",
+    "output_hash",
+    "timestamp",
+    "note"
+  ],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid" },
+    "invoice_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The invoice the call belongs to. 'unscoped' when the call is not tied to one invoice."
+    },
+    "role": {
+      "type": "string",
+      "enum": ["extractor", "orchestrator", "checker", "proposal_writer", "person"]
+    },
+    "tool": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "The tool id as written in policy/tool-policy.yaml, for example mcp__erp__run_query."
+    },
+    "allowed": { "type": "boolean" },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the canonical JSON of the tool input (sorted keys, no spaces)."
+    },
+    "output_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 of the tool output. Null when the call was denied or the output is not recorded."
+    },
+    "timestamp": { "type": "string", "format": "date-time", "description": "UTC." },
+    "note": { "type": "string", "maxLength": 500, "description": "The reason for a denial, or ok." }
+  },
+  "if": { "properties": { "allowed": { "const": false } }, "required": ["allowed"] },
+  "then": { "properties": { "output_hash": { "type": "null" } } }
+}

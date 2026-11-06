@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "source_sha256": "c98f9a4a6beab5f53fd4ddf1353db50535b35ea9c6127b9fe02003835efb1faa",
+    "role": "extractor",
+    "mode": "curated_synthetic",
+    "schema_version": 1,
+    "prompt_version": 1,
+    "rule_version": "1.0.0",
+    "source_path": "evals/golden/invoices/FPC-25-10733.pdf",
+    "provenance_note": "Human-curated from rendered page 1. Confidence is fixture confidence, not a recorded model confidence."
+  },
+  "response": {
+    "invoice_id": {"value": "FPC-25-10733", "page": 1, "quote": "Invoice No.: FPC-25-10733", "confidence": 0.99},
+    "vendor_name": {"value": "Fenwick Pallet & Crate Ltd", "page": 1, "quote": "Fenwick Pallet & Crate Ltd", "confidence": 0.99},
+    "vendor_address": {"value": "Unit 14, Clonshaugh Business Park\nDublin 17, D17 XY08\nIreland", "page": 1, "quote": "Unit 14, Clonshaugh Business Park\nDublin 17, D17 XY08\nIreland", "confidence": 0.99},
+    "payment_terms": {"value": "45 days net", "page": 1, "quote": "Terms of payment: 45 days net", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 7,394.00", "page": 1, "quote": "TOTAL DUE EUR 7,394.00", "confidence": 0.99},
+    "company_code": {"value": "2100", "page": 1, "quote": "Invoice to:\nCorvane Packaging GmbH\nCompany code 2100", "confidence": 0.99},
+    "po_reference": {"value": "4500203117", "page": 1, "quote": "Your PO no.: 4500203117", "confidence": 0.99},
+    "flags": []
+  }
+}

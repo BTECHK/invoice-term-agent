@@ -1,0 +1,11 @@
+{
+  "description": "Synthetic extraction rows for clear and exception runtime tests.",
+  "records": [
+    {"invoice_id": "SYN-EQUAL-001", "vendor_name": "Larkspur Tube & Core B.V.", "vendor_address": "Kanaalweg 14, 3526 KL Utrecht, Netherlands", "payment_terms": "Net 30 Days", "invoice_value": 1284.5, "company_code": "3000", "po_reference": "4500391102"},
+    {"invoice_id": "SYN-VALIDATED-001", "vendor_name": "Marrow & Finch Strapping Inc.", "vendor_address": "815 Foundry Street, Dayton, OH 45402, United States", "payment_terms": "Net 30 Days", "invoice_value": 2236.75, "company_code": "3000", "po_reference": "4500391217"},
+    {"invoice_id": "SYN-DISCOUNT-TAKEN-001", "vendor_name": "Ostrander Pallet Works Inc.", "vendor_address": "2200 Quarry Road, Toledo, OH 43604, United States", "payment_terms": "1.5/10 Net 40", "invoice_value": 3318.2, "company_code": "3000", "po_reference": "4500391385"},
+    {"invoice_id": "SYN-DISCOUNT-DECLINED-001", "vendor_name": "Brandt & Lowry Adhesives GmbH", "vendor_address": "Marktstrasse 22, 50667 Cologne, Germany", "payment_terms": "0.5/10 Net 55", "invoice_value": 4472.9, "company_code": "3000", "po_reference": "4500391460"},
+    {"invoice_id": "SYN-NEVER-ACCELERATE-001", "vendor_name": "Hollis Chemical Distribution Ltd", "vendor_address": "Unit 9, Harbour Trading Estate, Cork, T12 AB34, Ireland", "payment_terms": "1.5/10 Net 35", "invoice_value": 5391.35, "company_code": "3000", "po_reference": "4500391574"},
+    {"invoice_id": "SYN-OVER60-001", "vendor_name": "Corrigan Resin & Film S.A.", "vendor_address": "Rue des Forges 17, 4000 Liege, Belgium", "payment_terms": "Net 80 Days", "invoice_value": 6128.6, "company_code": "3000", "po_reference": "4500391629"}
+  ]
+}

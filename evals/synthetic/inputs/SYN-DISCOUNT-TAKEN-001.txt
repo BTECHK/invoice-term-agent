@@ -1,0 +1,8 @@
+Invoice #: SYN-DISCOUNT-TAKEN-001
+Vendor: Ostrander Pallet Works Inc.
+Address: 2200 Quarry Road, Toledo, OH 43604, United States
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391385
+Total: EUR 3318.20
+Payment Terms: 1.5/10 Net 40

@@ -1,0 +1,8 @@
+Invoice #: SYN-VALIDATED-001
+Vendor: Marrow & Finch Strapping Inc.
+Address: 815 Foundry Street, Dayton, OH 45402, United States
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391217
+Total: EUR 2236.75
+Payment Terms: Net 30 Days

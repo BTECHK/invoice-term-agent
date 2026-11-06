@@ -1,0 +1,13 @@
+flowchart TD
+  A[Invoice PDF or image + extraction transcript] --> B[Validate source hash, fields and envelope]
+  B -->|Valid| C[Read ERP facts through fixed queries]
+  B -->|Invalid| X[Audit the technical stop and quarantine the invoice]
+  C --> D[Apply deterministic payment-term rules]
+  D --> E[Checker re-reads facts and recomputes]
+  E -->|Clear and agrees| F[Stage checked proposal and audit event]
+  E -->|Hold or disagreement| G[Stage null payment day and open a worklist record]
+  F --> L[(Ingestion-ready records for ERP and BI)]
+  G --> L
+  G -. Design .-> H[Person resolves the issue and rechecks]
+  L -. Design .-> I[AP approval, approved ERP update, payment release]
+  H -. Design .-> I

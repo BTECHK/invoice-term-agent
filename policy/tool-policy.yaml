@@ -1,0 +1,255 @@
+# Tool policy: the source of truth for what each role may call. Anything not listed is denied.
+#
+# Read by .claude/hooks/pre-tool-use.py (enforcement in Claude Code), by scripts/check.py
+# (drift check against .claude/settings.json and integration/agent-tools.yaml) and by the runner.
+# An instruction file is context, not enforcement. For Claude Code, this file plus the hook is
+# the enforcement. For every other runtime the real guard sits on the ERP data service side: the
+# service must expose only the read tools and enforce role and server permissions.
+# An OAuth scope name alone does not enforce read-only access.
+#
+# Tool ids: built-in tools use their plain name. ERP tools use mcp__erp__<mcp_name>, with
+# the mcp_name taken from integration/agent-tools.yaml. The local mock server exposes the same names.
+#
+# Format limit: keep this file inside a small YAML subset (block maps, block lists and one-line
+# flow lists of scalars, no anchors, no lists of maps, no hash sign inside a value) so the hook
+# can read it with the standard library when PyYAML is missing. The same limit holds for
+# term-rules.yaml and models.yaml.
+
+# Pilot defaults, tune with AP. Claimed supplier buckets are not authentication.
+limits:
+  calls_per_minute: 400
+  max_wait_seconds: 120
+  max_invoices_per_run: 1000
+  max_invoices_per_supplier_per_run: 100
+  max_file_bytes: 10000000
+  max_pages: 10
+
+version: "1.0.0"
+default: deny
+
+mcp:
+  server: erp
+  server_aliases: [erp_mock]
+
+# The three write tools. Denied to every role in every environment (ADR-003).
+# Trigger ERP Action, Start Workflow, Resume Workflow.
+denied_everywhere:
+  - mcp__erp__trigger_erp_action
+  - mcp__erp__start_workflow
+  - mcp__erp__resume_workflow
+denied_everywhere_reason: "ADR-003: an invoice is untrusted input, so writes run only through an approved ERP action behind a person"
+
+# Not a write tool, but off in the pilot: Call Assistant Model starts a second model with its own
+# tools, which would sit outside our tier pinning, hook and audit trail.
+not_enabled_in_pilot:
+  - mcp__erp__call_assistant_model
+not_enabled_reason: "a nested model with its own tools bypasses the role limits; enable only after its tool set is pinned and audited"
+
+roles:
+  extractor:
+    description: "Reads one invoice and returns JSON that matches schemas/extraction.json. Touches untrusted text. No ERP tools."
+    model_tier: fast
+    allowed_tools:
+      - Read
+    denied_tools:
+      - mcp__erp__run_query
+      - mcp__erp__get_data_catalog
+      - mcp__erp__search_records
+      - mcp__erp__get_kpis
+      - mcp__erp__call_assistant_model
+      - mcp__erp__trigger_erp_action
+      - mcp__erp__start_workflow
+      - mcp__erp__resume_workflow
+      - mcp__erp__get_event_timeline
+      - Bash
+      - Write
+      - Edit
+      - NotebookEdit
+      - WebFetch
+      - WebSearch
+    write_paths: []
+    max_steps: 3
+    max_cost_usd: 0.05
+    max_reflection_cycles: 3
+
+  orchestrator:
+    description: "Runs the rules, routes, and works exceptions with the seven skills. Five ERP read tools, no write tool."
+    model_tier: frontier
+    # Skill loads the seven SKILL.md files. Agent starts the extractor and checker subagents; the
+    # hook still applies to every call they make.
+    allowed_tools:
+      - Read
+      - Skill
+      - Agent
+      - mcp__erp__run_query
+      - mcp__erp__get_data_catalog
+      - mcp__erp__search_records
+      - mcp__erp__get_kpis
+      - mcp__erp__get_event_timeline
+    denied_tools:
+      - mcp__erp__call_assistant_model
+      - mcp__erp__trigger_erp_action
+      - mcp__erp__start_workflow
+      - mcp__erp__resume_workflow
+      - Bash
+      - Write
+      - Edit
+      - NotebookEdit
+      - WebFetch
+      - WebSearch
+    write_paths: []
+    max_steps: 15
+    max_cost_usd: 0.50
+    max_reflection_cycles: 3
+
+  checker:
+    description: "Offline: separate deterministic context re-queries trusted facts. Production different-family model remains Design. Read only."
+    model_tier: different_family
+    allowed_tools:
+      - Read
+      - mcp__erp__run_query
+      - mcp__erp__get_data_catalog
+      - mcp__erp__search_records
+      - mcp__erp__get_kpis
+      - mcp__erp__get_event_timeline
+    denied_tools:
+      - mcp__erp__call_assistant_model
+      - mcp__erp__trigger_erp_action
+      - mcp__erp__start_workflow
+      - mcp__erp__resume_workflow
+      - Bash
+      - Write
+      - Edit
+      - NotebookEdit
+      - WebFetch
+      - WebSearch
+    write_paths: []
+    max_steps: 8
+    max_cost_usd: 0.25
+    max_reflection_cycles: 3
+
+  proposal_writer:
+    description: "The only Write holder. Writes worklist records and audit events, nothing else. Files in the pilot, ERP staging tables in production (ADR-006)."
+    model_tier: none
+    allowed_tools:
+      - Read
+      - Write
+    denied_tools:
+      - mcp__erp__run_query
+      - mcp__erp__get_data_catalog
+      - mcp__erp__search_records
+      - mcp__erp__get_kpis
+      - mcp__erp__call_assistant_model
+      - mcp__erp__trigger_erp_action
+      - mcp__erp__start_workflow
+      - mcp__erp__resume_workflow
+      - mcp__erp__get_event_timeline
+      - Bash
+      - Edit
+      - NotebookEdit
+      - WebFetch
+      - WebSearch
+    write_paths:
+      - worklist/
+      - audit/
+    max_steps: 4
+    max_cost_usd: 0.05
+    max_reflection_cycles: 3
+
+# How the hook decides which role a call belongs to. A subagent identity beats the session
+# variable, which beats the default. An unknown role is denied.
+role_resolution:
+  env_var: AP_AGENT_ROLE
+  invoice_env_var: AP_AGENT_INVOICE_ID
+  default_role: orchestrator
+  subagent_roles:
+    extractor: extractor
+    checker: checker
+
+# A person editing this repository with a coding agent sets this variable before launching it.
+# Built-in tools open up, protected paths become editable, and ERP calls stay limited to the
+# orchestrator list. The three write tools stay denied. The audit line records the role person.
+development_mode:
+  env_var: AP_AGENT_DEV
+
+# No role writes here at run time, whatever its write_paths say.
+protected_paths:
+  - policy/
+  - schemas/
+  - skills/
+  - integration/
+  - evals/golden/
+  - .claude/
+  - .agents/
+  - .github/
+  - .mcp.json
+  - audit/hooks.jsonl
+read_deny_names:
+  - .env
+  - .env.local
+  - .env.production
+hook_log: audit/hooks.jsonl
+
+# Trust ladder (ADR-003). The values below are starting values, to be set with the Head of accounts payable (AP)
+# once reviewer capacity is known (Q-3). They are production rung thresholds. The thresholds that
+# gate CI live in evals/thresholds.json and are a different thing.
+trust_ladder:
+  current_rung: shadow
+  metrics:
+    error_rate: "share of reviewed proposals that a person changed or rejected"
+    sampled_review_share: "share of proposals a person reads, chosen at random, before or after they take effect"
+    exception_recall: "share of true exceptions that the rules and the agent sent to the worklist"
+  never_automated:
+    - exceptions
+    - payment_run_release
+    - express_agreement_over_60_days
+    - bank_or_remit_to_change
+  auto_apply_conditions:
+    max_term_days: 60
+    max_invoice_value_eur: 25000
+    checker_must_agree: true
+    flags_must_be_empty: true
+  rungs:
+    shadow:
+      order: 0
+      proposals_visible_to_ap: false
+      auto_apply_clear_cases: false
+      sampled_review_share: 1.0
+      promote_when:
+        min_invoices: 300
+        min_weeks: 2
+        max_error_rate: 0.05
+        min_exception_recall: 0.99
+    propose_with_approval:
+      order: 1
+      proposals_visible_to_ap: true
+      auto_apply_clear_cases: false
+      sampled_review_share: 1.0
+      promote_when:
+        min_invoices: 1000
+        min_weeks: 4
+        max_error_rate: 0.02
+        min_exception_recall: 0.995
+    auto_apply_clear_cases:
+      order: 2
+      proposals_visible_to_ap: true
+      auto_apply_clear_cases: true
+      sampled_review_share: 0.20
+      promote_when:
+        min_invoices: 5000
+        min_weeks: 8
+        max_error_rate: 0.01
+        min_exception_recall: 0.995
+    steady_state:
+      order: 3
+      proposals_visible_to_ap: true
+      auto_apply_clear_cases: true
+      sampled_review_share: 0.05
+      promote_when: null
+  demote_one_rung_when:
+    error_rate_above: 0.04
+    exception_recall_below: 0.98
+  demote_to_shadow_when:
+    - injection_text_followed
+    - denied_tool_call_succeeded
+    - over_60_day_term_applied_without_confirmation

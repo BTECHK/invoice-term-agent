@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "erp": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "mock_erp/server.py"
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+flowchart LR
+  classDef auto fill:#F4F5F7,stroke:#C9CDD4,color:#1F2937
+  classDef human fill:#E8F1EC,stroke:#2F7D57,color:#1F2937
+  classDef poc fill:#FFFFFF,stroke:#2F7D57,stroke-width:2px,color:#1F2937
+  classDef erp fill:#FFFFFF,stroke:#6B7280,color:#1F2937
+
+  A([Invoice arrives<br/>PDF, image or e-invoice]):::auto
+  B[1  Read the invoice<br/>seven fields with<br/>quotes and page cites]:::poc
+  C[2  Match in the ERP data<br/>order, goods receipt,<br/>vendor master]:::auto
+  D{3  Do the terms agree,<br/>or is a validated<br/>term on file?}:::auto
+  E[4  Propose the date<br/>longest valid term;<br/>discount only when it beats<br/>the cost of capital]:::poc
+  F[Exception agent<br/>pulls vendor history and<br/>past decisions, drafts a<br/>recommendation with evidence]:::poc
+  G[AP worklist<br/>a person decides]:::human
+  H[Approval form<br/>Head of AP or delegate]:::human
+  I[Approved ERP action<br/>updates the SAP<br/>payment term or baseline date]:::erp
+  J([Payment run<br/>released by an<br/>authorized person]):::human
+
+  A --> B --> C --> D
+  D -- "clear case<br/>(rules decide)" --> E --> H
+  D -- "ambiguous" --> F --> G --> H
+  H --> I --> J

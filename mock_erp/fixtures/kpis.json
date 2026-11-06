@@ -1,0 +1,20 @@
+{
+  "description": "Sample KPI values by topic for the get_kpis tool (fictional).",
+  "topics": {
+    "payment_timing": {
+      "avg_days_invoice_to_clearing": 44.2,
+      "std_dev_days": 3.1,
+      "share_of_value_paid_before_due": 0.534,
+      "cleared_invoice_lines": 13512
+    },
+    "term_alignment": {
+      "po_term_shorter_share": 0.186,
+      "po_term_shorter_lines": 2870,
+      "po_term_longer_lines": 8150,
+      "equal_term_lines": 4390
+    },
+    "delivery_reliability": {
+      "late_delivery_share": 0.274
+    }
+  }
+}

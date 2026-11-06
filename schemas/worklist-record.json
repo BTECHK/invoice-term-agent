@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invoice-term-agent:schema:worklist-record:1",
+  "title": "Worklist record",
+  "description": "One record per exception invoice. It feeds the existing AP worklist (the ERP queue of parked or blocked invoices) with the evidence a person needs to decide. The agent writes status open. Only a person moves it to approved or rejected. In the BI staging table (agent_worklist) the nested money_impact fields flatten to money_impact_amount and money_impact_currency, exception_types joins with semicolons and evidence is stored as JSON text.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "invoice_id",
+    "exception_types",
+    "evidence",
+    "recommendation",
+    "money_impact",
+    "created_at",
+    "status",
+    "decided_by",
+    "decided_at"
+  ],
+  "properties": {
+    "invoice_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "exception_types": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Skill names, in the precedence order of policy/term-rules.yaml. The first entry is the primary exception.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "no-validated-term",
+          "over-60-days",
+          "missing-or-wrong-po",
+          "po-not-approved-or-receipted",
+          "supplier-or-remittance-mismatch",
+          "discount-eligibility",
+          "value-outside-tolerance"
+        ]
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 40,
+      "description": "Every figure the recommendation relies on, with where it came from.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "query_id", "value"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["erp", "invoice", "rules"],
+            "description": "erp: a fixed query result. invoice: a field or flag from the extraction. rules: a figure computed by the rules code."
+          },
+          "query_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "For erp, a query id from integration/agent-tools.yaml. For invoice, the extraction field name or 'flags'. For rules, the rule key in policy/term-rules.yaml."
+          },
+          "value": {
+            "type": ["string", "number", "boolean", "null"],
+            "description": "The figure or the quoted text. Untrusted text is stored as plain text, never as markup. Null when the value could not be read."
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200,
+      "description": "The skill's fixed recommendation format, at most 120 words. Plain text."
+    },
+    "money_impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "description": "Both numbers behind the exception live in evidence; this is the money at stake. Currency is stated because PO values and invoices can carry different currencies.",
+      "properties": {
+        "amount": { "type": "number", "description": "Signed. Positive when the company pays or loses more." },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "status": { "type": "string", "enum": ["open", "approved", "rejected"] },
+    "decided_by": {
+      "type": ["string", "null"],
+      "maxLength": 64,
+      "description": "A role or user id of the person who decided. Null while open."
+    },
+    "decided_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "if": { "properties": { "status": { "const": "open" } }, "required": ["status"] },
+  "then": {
+    "properties": { "decided_by": { "type": "null" }, "decided_at": { "type": "null" } }
+  },
+  "else": {
+    "properties": { "decided_by": { "type": "string", "minLength": 1 }, "decided_at": { "type": "string" } }
+  }
+}

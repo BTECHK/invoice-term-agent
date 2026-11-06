@@ -1,0 +1,17 @@
+# Install with: pre-commit install
+# The gitleaks hook needs a Go toolchain the first time. Run `pre-commit autoupdate --freeze` to
+# refresh the pinned commit.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e # frozen: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: repository-check
+        name: Repository check (skills, schemas, mirrors, settings, secret patterns, dashes)
+        entry: python3 scripts/check.py
+        language: system
+        pass_filenames: false
+        always_run: true

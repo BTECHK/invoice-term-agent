@@ -1,0 +1,39 @@
+{
+  "name": "ap_read_model",
+  "description": "Read model of the purchase to pay process (mock). Tables and columns follow the read views in integration/agent-tools.yaml.",
+  "tables": {
+    "po_lines": [
+      "po_line_key",
+      "vendor_key",
+      "company_code",
+      "po_term_days",
+      "master_term_days",
+      "net_order_value",
+      "contract_usage",
+      "delivery_date_deviation_days"
+    ],
+    "po_events": [
+      "po_line_key",
+      "event",
+      "event_time"
+    ],
+    "vendors": [
+      "vendor_key",
+      "vendor_name"
+    ],
+    "invoice_extraction": [
+      "invoice_id",
+      "vendor_name",
+      "vendor_address",
+      "payment_terms",
+      "invoice_value",
+      "company_code",
+      "po_reference"
+    ]
+  },
+  "kpis": [
+    "payment_timing",
+    "term_alignment",
+    "delivery_reliability"
+  ]
+}

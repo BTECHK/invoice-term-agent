@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:invoice-term-agent:schema:proposal:1",
+  "title": "Payment term proposal",
+  "description": "One proposal per invoice. For a clear case it carries the governing term and a proposed payment day. For an exception the day is null and the reason code names the exception; the recommendation lives in the worklist record. The day is a count of days after the baseline date. SAP computes the due date; the agent proposes a term or a baseline date change.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "invoice_id",
+    "po_reference",
+    "governing_term_days",
+    "term_source",
+    "proposed_payment_day",
+    "discount_taken",
+    "discount_rate",
+    "annualized_discount",
+    "reason_code",
+    "rule_version",
+    "checker_agrees"
+  ],
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "po_reference": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 32,
+      "description": "The PO line key the invoice was matched to. Null when no PO was found."
+    },
+    "governing_term_days": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 365,
+      "description": "The longest validated term in days. For an exception it may hold the term under question, and proposed_payment_day stays null."
+    },
+    "term_source": {
+      "enum": [
+        "printed",
+        "po",
+        "vendor_master",
+        "validated",
+        null
+      ],
+      "description": "Which source supplied the governing term. When sources are equal the tie break in policy/term-rules.yaml applies."
+    },
+    "proposed_payment_day": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 365,
+      "description": "Days after the baseline date. The discount day when a discount is taken, otherwise the governing term. Null for an exception."
+    },
+    "discount_taken": {
+      "type": "boolean"
+    },
+    "discount_rate": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "exclusiveMaximum": 1,
+      "description": "Fraction, 0.02 for 2 percent. Null when no discount is offered."
+    },
+    "annualized_discount": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Fraction per year, computed by the rules code. Null when no discount is offered."
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "AGREED_TERM",
+        "VALIDATED_LONGER_TERM",
+        "DISCOUNT_TAKEN",
+        "DISCOUNT_DECLINED",
+        "NEVER_ACCELERATE_VENDOR",
+        "NO_VALIDATED_TERM",
+        "OVER_60_DAYS",
+        "MISSING_OR_WRONG_PO",
+        "PO_NOT_APPROVED_OR_RECEIPTED",
+        "SUPPLIER_OR_REMITTANCE_MISMATCH",
+        "DISCOUNT_ELIGIBILITY",
+        "VALUE_OUTSIDE_TOLERANCE"
+      ],
+      "description": "Must match a key of reason_codes in policy/term-rules.yaml."
+    },
+    "rule_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "The version of policy/term-rules.yaml that produced this proposal."
+    },
+    "checker_agrees": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "The checker's answer. Null when the checker has not run."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "discount_taken": {
+            "const": true
+          }
+        },
+        "required": [
+          "discount_taken"
+        ]
+      },
+      "then": {
+        "properties": {
+          "discount_rate": {
+            "type": "number"
+          },
+          "annualized_discount": {
+            "type": "number"
+          },
+          "proposed_payment_day": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "NO_VALIDATED_TERM",
+              "OVER_60_DAYS",
+              "MISSING_OR_WRONG_PO",
+              "PO_NOT_APPROVED_OR_RECEIPTED",
+              "SUPPLIER_OR_REMITTANCE_MISMATCH",
+              "DISCOUNT_ELIGIBILITY",
+              "VALUE_OUTSIDE_TOLERANCE"
+            ]
+          }
+        },
+        "required": [
+          "reason_code"
+        ]
+      },
+      "then": {
+        "properties": {
+          "proposed_payment_day": {
+            "type": "null"
+          },
+          "discount_taken": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "checker_agrees": {
+            "enum": [
+              false,
+              null
+            ]
+          }
+        },
+        "required": [
+          "checker_agrees"
+        ]
+      },
+      "then": {
+        "properties": {
+          "proposed_payment_day": {
+            "type": "null"
+          },
+          "discount_taken": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

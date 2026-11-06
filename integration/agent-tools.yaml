@@ -1,0 +1,192 @@
+# Read contract for the ERP data service. The agent reaches ERP and BI data only through these
+# fixed queries; the mock server in mock_erp/ answers them from fixtures, and a production
+# deployment would back them with read-only views in the ERP reporting layer or BI warehouse.
+# The contract is an internal mock written for this repository, not a definition of any real service.
+#
+# One MCP endpoint exposes nine tools. The pilot enables five read tools. Run Query accepts only a
+# fixed query id declared below: the query text is fixed, and the model fills only the declared
+# ${variables}, each checked against its pattern before substitution (the model never writes a
+# query, ADR-002). Invoice text can reach a variable, so every pattern excludes quotes and spaces.
+#
+# The SQL bodies document the intended read views; the mock does not execute them. PO means
+# purchase order. Tool ids in policy/tool-policy.yaml are mcp__erp__<mcp_name>.
+# Reading this file needs full YAML (block scalars, lists of maps), unlike policy/*.yaml.
+
+service:
+  url_env: ERP_MCP_URL
+  token_env: ERP_TOKEN
+  auth:
+    service: oauth_client_credentials
+    scope: erp-read.tools:execute
+    people: authorization_code_with_pkce
+    app_keys: "static keys are never used here"
+  client_throttle_calls_per_minute: 400
+  query_mode: fixed_ids_only
+  tools_exposed_in_pilot: 5
+
+tools:
+  - display_name: Run Query
+    mcp_name: run_query
+    class: read
+    pilot: allowed
+    use: "the eight fixed queries below, by id only"
+  - display_name: Get Data Catalog
+    mcp_name: get_data_catalog
+    class: read
+    pilot: allowed
+    use: "read table, column and key performance indicator (KPI) definitions once per run, then cache"
+  - display_name: Search Records
+    mcp_name: search_records
+    class: read
+    pilot: allowed
+    use: "find a vendor record by name when po_reference is missing; the search text comes from the invoice, so it is quoted and length capped"
+  - display_name: Get KPIs
+    mcp_name: get_kpis
+    class: read
+    pilot: allowed
+    use: "framed KPIs such as payment timing, for the evidence footnote"
+  - display_name: Get Event Timeline
+    mcp_name: get_event_timeline
+    class: read
+    pilot: allowed
+    use: "event timeline of one PO line, for po-not-approved-or-receipted"
+  - display_name: Call Assistant Model
+    mcp_name: call_assistant_model
+    class: nested_model
+    pilot: denied
+    use: "starts a second model with its own tools; off until its tool set is pinned and audited"
+  - display_name: Trigger ERP Action
+    mcp_name: trigger_erp_action
+    class: write
+    pilot: denied_everywhere
+    use: "posts a change to the ERP; only the approval workflow triggers it, after a person approves (integration/write-path.md)"
+  - display_name: Start Workflow
+    mcp_name: start_workflow
+    class: write
+    pilot: denied_everywhere
+    use: "starts a downstream workflow; the platform starts it from the worklist decision, not the model"
+  - display_name: Resume Workflow
+    mcp_name: resume_workflow
+    class: write
+    pilot: denied_everywhere
+    use: "resumes a paused workflow; only a submitted approval form resumes it"
+
+# Read views the queries use. invoice_extraction is the landing table for reader output (staged
+# for downstream ingestion); validated_payment_terms and agent_worklist are proposed.
+tables:
+  po_lines: "one row per PO line; po_line_key is the 10 digit purchasing document number, zero padded"
+  po_events: "event log per PO line; events used: PO line created, goods receipt posted, invoice received, invoice cleared, PO blocked, PO released"
+  vendors: "vendor_key, vendor_name"
+  invoice_extraction: "invoice_id, vendor_name, vendor_address, payment_terms, invoice_value, company_code, po_reference; joined to po_lines on po_reference"
+  validated_payment_terms: "proposed, owned by Procurement (Q-2): vendor_key, company_code, term_days, discount_percent, discount_days, express_agreement, validated_by_role, validated_on"
+  agent_worklist: "proposed, the landed worklist records (schemas/worklist-record.json, flattened); linked to invoice_extraction on invoice_id"
+
+variable_types:
+  po_reference: {pattern: '^[0-9]{10}$', note: "the purchasing document number, zero padded to 10 digits by the rules code, not by the model"}
+  invoice_id: {pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$', note: "as read by the extractor; no slash, so it cannot form a path"}
+  vendor: {pattern: '^V[0-9]{5}$', note: "the vendor key from the PO header, never the invoice's vendor name"}
+  company_code: {pattern: '^[0-9]{4,5}$', note: "the company code from the PO header"}
+  kpi_topic: {pattern: '^[a-z][a-z0-9_]{0,39}$', note: "a topic name from Get KPIs, lower case with underscores"}
+  search_text: {pattern: '^[^\x00-\x1f]{1,80}$', note: "free text from the invoice for Search Records, length capped, no control characters"}
+
+queries:
+  - id: po_terms
+    purpose: "PO header: vendor, company code, the PO and vendor master terms, value, contract use"
+    variables: [po_reference]
+    max_rows: 1
+    returns: [po_line_key, vendor, company_code, po_term_days, master_term_days, net_order_value, contract_usage]
+    sql: |
+      SELECT po_line_key, vendor_key AS vendor, company_code,
+             po_term_days, master_term_days, net_order_value, contract_usage
+      FROM po_lines
+      WHERE po_line_key = '${po_reference}'
+
+  - id: po_activity_state
+    purpose: "PO life cycle: created, received, blocked, released, invoiced, cleared. The ERP ran the match at invoice entry; this only reads the state"
+    variables: [po_reference]
+    max_rows: 1
+    returns: [po_line_key, created_at, invoice_received_at, goods_receipt_count, goods_receipt_last_at, block_count, block_last_at, release_count, release_last_at, cleared_at]
+    sql: |
+      SELECT po_line_key,
+             MIN(event_time) FILTER (WHERE event = 'po_line_created')     AS created_at,
+             MIN(event_time) FILTER (WHERE event = 'invoice_received')    AS invoice_received_at,
+             COUNT(*)        FILTER (WHERE event = 'goods_receipt_posted') AS goods_receipt_count,
+             MAX(event_time) FILTER (WHERE event = 'goods_receipt_posted') AS goods_receipt_last_at,
+             COUNT(*)        FILTER (WHERE event = 'po_blocked')           AS block_count,
+             MAX(event_time) FILTER (WHERE event = 'po_blocked')           AS block_last_at,
+             COUNT(*)        FILTER (WHERE event = 'po_released')          AS release_count,
+             MAX(event_time) FILTER (WHERE event = 'po_released')          AS release_last_at,
+             MAX(event_time) FILTER (WHERE event = 'invoice_cleared')      AS cleared_at
+      FROM po_events
+      WHERE po_line_key = '${po_reference}'
+      GROUP BY po_line_key
+
+  - id: extracted_invoice
+    purpose: "the reader's landed row for this invoice"
+    variables: [invoice_id]
+    max_rows: 1
+    returns: [invoice_id, vendor_name, vendor_address, payment_terms, invoice_value, company_code, po_reference]
+    sql: |
+      SELECT invoice_id, vendor_name, vendor_address, payment_terms, invoice_value, company_code, po_reference
+      FROM invoice_extraction
+      WHERE invoice_id = '${invoice_id}'
+
+  - id: vendor_term_history
+    purpose: "this supplier's PO and master term pairs for this company code, with value and days from invoice receipt to clearing"
+    variables: [vendor, company_code]
+    max_rows: 20
+    returns: [po_term_days, master_term_days, line_count, net_order_value, avg_days_invoice_to_payment]
+    sql: |
+      SELECT l.po_term_days, l.master_term_days, COUNT(*) AS line_count, SUM(l.net_order_value) AS net_order_value,
+             AVG(c.event_time::date - r.event_time::date) AS avg_days_invoice_to_payment
+      FROM po_lines l
+      JOIN po_events r ON r.po_line_key = l.po_line_key AND r.event = 'invoice_received'
+      JOIN po_events c ON c.po_line_key = l.po_line_key AND c.event = 'invoice_cleared'
+      WHERE l.vendor_key = '${vendor}' AND l.company_code = '${company_code}'
+      GROUP BY l.po_term_days, l.master_term_days
+
+  - id: validated_terms
+    purpose: "terms a person has validated for this vendor and company code, with discount terms and the express agreement flag"
+    variables: [vendor, company_code]
+    max_rows: 10
+    returns: [vendor, company_code, term_days, discount_percent, discount_days, express_agreement, validated_by_role, validated_on]
+    sql: |
+      SELECT vendor_key AS vendor, company_code, term_days, discount_percent, discount_days,
+             express_agreement, validated_by_role, validated_on
+      FROM validated_payment_terms
+      WHERE vendor_key = '${vendor}' AND company_code = '${company_code}'
+
+  - id: past_decisions
+    purpose: "earlier worklist decisions for this vendor, reached through invoice_extraction and the PO; roles and decisions only, no recommendation text"
+    variables: [vendor]
+    max_rows: 25
+    returns: [invoice_id, exception_types, status, decided_at, money_impact_amount, money_impact_currency]
+    sql: |
+      SELECT w.invoice_id, w.exception_types, w.status, w.decided_at, w.money_impact_amount, w.money_impact_currency
+      FROM agent_worklist w
+      JOIN invoice_extraction e ON e.invoice_id = w.invoice_id
+      JOIN po_lines l ON l.po_line_key = e.po_reference
+      WHERE l.vendor_key = '${vendor}' AND w.status <> 'open'
+
+  - id: vendor_delivery_profile
+    purpose: "how many of this vendor's lines arrive late, and the value they carry"
+    variables: [vendor]
+    max_rows: 1
+    returns: [vendor, line_count, late_share, net_order_value]
+    sql: |
+      SELECT vendor_key AS vendor, COUNT(*) AS line_count,
+             AVG(CASE WHEN delivery_date_deviation_days > 0 THEN 1.0 ELSE 0.0 END) AS late_share,
+             SUM(net_order_value) AS net_order_value
+      FROM po_lines
+      WHERE vendor_key = '${vendor}'
+      GROUP BY vendor_key
+
+  - id: vendor_record
+    purpose: "the supplier record for a vendor key. The read view holds no address or payment details; a field it lacks is stated as not available"
+    variables: [vendor]
+    max_rows: 1
+    returns: [vendor, vendor_name]
+    sql: |
+      SELECT vendor_key AS vendor, vendor_name
+      FROM vendors
+      WHERE vendor_key = '${vendor}'

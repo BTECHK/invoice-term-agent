@@ -1,0 +1,13 @@
+{
+  "metadata": {"source_sha256": "d3f61b73eb342406d4a1487fa8eb9707fa9b54e388b79333964c637b32ac1a77", "role": "extractor", "mode": "curated_synthetic", "schema_version": 1, "prompt_version": 1, "rule_version": "1.0.0", "source_path": "evals/synthetic/inputs/SYN-NEVER-ACCELERATE-001.txt", "provenance_note": "Purpose-built synthetic never-accelerate case. Confidence is fixture confidence, not model confidence."},
+  "response": {
+    "invoice_id": {"value": "SYN-NEVER-ACCELERATE-001", "page": 1, "quote": "Invoice #: SYN-NEVER-ACCELERATE-001", "confidence": 0.99},
+    "vendor_name": {"value": "Hollis Chemical Distribution Ltd", "page": 1, "quote": "Vendor: Hollis Chemical Distribution Ltd", "confidence": 0.99},
+    "vendor_address": {"value": "Unit 9, Harbour Trading Estate, Cork, T12 AB34, Ireland", "page": 1, "quote": "Address: Unit 9, Harbour Trading Estate, Cork, T12 AB34, Ireland", "confidence": 0.99},
+    "payment_terms": {"value": "1.5/10 Net 35", "page": 1, "quote": "Payment Terms: 1.5/10 Net 35", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 5391.35", "page": 1, "quote": "Total: EUR 5391.35", "confidence": 0.99},
+    "company_code": {"value": "3000", "page": 1, "quote": "Company code: 3000", "confidence": 0.99},
+    "po_reference": {"value": "4500391574", "page": 1, "quote": "PO Reference: 4500391574", "confidence": 0.99},
+    "flags": []
+  }
+}

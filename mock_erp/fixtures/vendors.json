@@ -1,0 +1,89 @@
+{
+  "description": "Supplier records. The read view holds no address or bank detail. line_count and late_share are filled only for the three vendors on the never accelerate list.",
+  "records": [
+    {
+      "vendor": "V18260",
+      "vendor_name": "Aldous Pigments GmbH",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V20417",
+      "vendor_name": "Kestrel Board & Paper B.V.",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V26745",
+      "vendor_name": "Brookhaven Core & Tube Inc.",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V31204",
+      "vendor_name": "Hollis Chemical Distribution Ltd",
+      "line_count": 2460,
+      "late_share": 0.781
+    },
+    {
+      "vendor": "V31882",
+      "vendor_name": "Fenwick Pallet & Crate Ltd",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V37729",
+      "vendor_name": "Ostler Film & Foil S.p.A.",
+      "line_count": 1730,
+      "late_share": 0.652
+    },
+    {
+      "vendor": "V40563",
+      "vendor_name": "Rhenish Ink & Coatings GmbH",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V47026",
+      "vendor_name": "Dewolf Label & Print N.V.",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V52209",
+      "vendor_name": "Pinecrest Industrial Chemicals Inc.",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V58871",
+      "vendor_name": "Redmoor Adhesives & Resins GmbH",
+      "line_count": 940,
+      "late_share": 0.694
+    },
+    {
+      "vendor": "V63114",
+      "vendor_name": "Ninebark Freight & Logistics LLC",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V70655",
+      "vendor_name": "Tamarack Strapping & Wrap GmbH",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V84031",
+      "vendor_name": "Sorrel Starch & Binder S.A.",
+      "line_count": null,
+      "late_share": null
+    },
+    {
+      "vendor": "V90512",
+      "vendor_name": "Calder Strapping Supply B.V.",
+      "line_count": null,
+      "late_share": null
+    }
+  ]
+}

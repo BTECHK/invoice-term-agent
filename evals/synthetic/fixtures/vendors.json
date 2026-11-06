@@ -1,0 +1,11 @@
+{
+  "description": "Synthetic supplier records.",
+  "records": [
+    {"vendor": "V31204", "vendor_name": "Hollis Chemical Distribution Ltd", "line_count": 120, "late_share": 0.781, "net_order_value": 480000.0},
+    {"vendor": "V12907", "vendor_name": "Larkspur Tube & Core B.V.", "line_count": null, "late_share": null, "net_order_value": null},
+    {"vendor": "V13588", "vendor_name": "Marrow & Finch Strapping Inc.", "line_count": null, "late_share": null, "net_order_value": null},
+    {"vendor": "V14272", "vendor_name": "Ostrander Pallet Works Inc.", "line_count": null, "late_share": null, "net_order_value": null},
+    {"vendor": "V15346", "vendor_name": "Brandt & Lowry Adhesives GmbH", "line_count": null, "late_share": null, "net_order_value": null},
+    {"vendor": "V16789", "vendor_name": "Corrigan Resin & Film S.A.", "line_count": null, "late_share": null, "net_order_value": null}
+  ]
+}

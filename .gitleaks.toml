@@ -1,0 +1,36 @@
+# Gitleaks configuration. Extends the built-in rules and adds three rules for this repository.
+# CI runs `gitleaks git --redact` over the full history, so a finding never prints the secret.
+
+title = "invoice-term-agent gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "erp-credential-assignment"
+description = "An ERP token, API key or client secret assigned a literal value"
+regex = '''(?i)(?:erp[_-]?(?:token|app[_-]?key|api[_-]?key|client[_-]?secret)|ERP_TOKEN)\s*[=:]\s*["']?[A-Za-z0-9+/=_\-\.]{20,}'''
+keywords = ["erp"]
+
+[[rules]]
+id = "url-with-embedded-credentials"
+description = "A URL that carries a user and password or a token in its authority part"
+regex = '''https?://[^/\s:@"']+:[^/\s@"']+@[A-Za-z0-9.\-]+'''
+keywords = ["http"]
+
+[[rules]]
+id = "bearer-token-literal"
+description = "An Authorization header with a literal bearer token"
+regex = '''(?i)authorization["']?\s*[:=]\s*["']?bearer\s+[A-Za-z0-9._~+/\-]{20,}=*'''
+keywords = ["bearer"]
+
+[allowlist]
+description = "Placeholders and the injection test case"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''^evals/golden/injection/''',
+]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''(?i)(placeholder|changeme|example|your[_-]?token)''',
+]

@@ -1,0 +1,45 @@
+# Model tiers are a production design. No provider execution is part of this build.
+# Curated replay confidence is fixture metadata, not a measured model confidence.
+version: "1.0.0"
+
+tiers:
+  frontier:
+    use: "ambiguous cases, long evidence, tool use across several queries"
+    needs: [tool_use, structured_output, long_context]
+  fast:
+    use: "high volume reading and short single purpose queries"
+    needs: [vision, pdf_input, structured_output]
+  different_family:
+    use: "the checker; a model family other than the orchestrator's, so a shared blind spot is less likely"
+    needs: [tool_use, structured_output]
+    rule: "A production runner must enforce family(checker) != family(orchestrator) and refuse to start otherwise"
+
+roles:
+  orchestrator:
+    tier: frontier
+  exception_resolver:
+    tier: frontier
+    note: "the orchestrator working an exception with a skill"
+  extractor:
+    tier: fast
+    note: "needs vision and PDF input; layouts vary in production"
+  per_skill_queries:
+    tier: fast
+    note: "fills declared variables for the fixed Run Query queries; never writes a query"
+  checker:
+    tier: different_family
+  proposal_writer:
+    tier: none
+    note: "formats records in code; no model call needed"
+
+pinning:
+  rule: "Pin one exact version per role. Never use an alias that moves to a newer model."
+  on_change: "Any change to a pin, a prompt or a skill runs evals/grade.py on the golden set and the labelled set. Merge only if the gates in evals/thresholds.json hold. Keep the old pin until the new one has passed."
+  rollback: "Restore the previous pin and re-run the same set."
+  pins: null
+
+execution:
+  default: curated_synthetic
+  live_enabled: false
+  checker: deterministic_separate_context
+  different_family_status: Design

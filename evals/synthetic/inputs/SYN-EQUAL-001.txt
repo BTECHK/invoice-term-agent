@@ -1,0 +1,8 @@
+Invoice #: SYN-EQUAL-001
+Vendor: Larkspur Tube & Core B.V.
+Address: Kanaalweg 14, 3526 KL Utrecht, Netherlands
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391102
+Total: EUR 1284.50
+Payment Terms: Net 30 Days

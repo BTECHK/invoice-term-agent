@@ -1,0 +1,8 @@
+Invoice #: SYN-OVER60-001
+Vendor: Corrigan Resin & Film S.A.
+Address: Rue des Forges 17, 4000 Liege, Belgium
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391629
+Total: EUR 6128.60
+Payment Terms: Net 80 Days

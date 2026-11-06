@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "source_sha256": "7a6c44c9679b9fb2f81b4dbacd2f4e0581e179df0df939a71304e16838d292bc",
+    "role": "extractor",
+    "mode": "curated_synthetic",
+    "schema_version": 1,
+    "prompt_version": 1,
+    "rule_version": "1.0.0",
+    "source_path": "evals/golden/invoices/PCS-25-03917.png",
+    "provenance_note": "Human-curated from page 1 after visual inspection. Confidence is fixture confidence, not a recorded model confidence."
+  },
+  "response": {
+    "invoice_id": {"value": "PCS-25-03917", "page": 1, "quote": "Invoice no.: PCS-25-03917", "confidence": 0.99},
+    "vendor_name": {"value": "Pinecrest Industrial Chemicals Inc.", "page": 1, "quote": "Pinecrest Industrial Chemicals Inc.", "confidence": 0.99},
+    "vendor_address": {"value": "780 Tannery Lane\nGreenville, SC 29605\nUnited States", "page": 1, "quote": "780 Tannery Lane\nGreenville, SC 29605\nUnited States", "confidence": 0.99},
+    "payment_terms": {"value": "Net 21 days", "page": 1, "quote": "TERMS\nNet 21 days", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 4,573.80", "page": 1, "quote": "Total due: EUR 4,573.80", "confidence": 0.99},
+    "company_code": {"value": "3200", "page": 1, "quote": "Bill to:\nCorvane Packaging B.V.\nCompany code: 3200", "confidence": 0.99},
+    "po_reference": {"value": "4600241503", "page": 1, "quote": "PO number: 4600241503", "confidence": 0.99},
+    "flags": []
+  }
+}

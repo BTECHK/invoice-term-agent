@@ -1,0 +1,13 @@
+{
+  "metadata": {"source_sha256": "74981b3ec9b76f3d9db1fe712611b29649d1d8bbe47b8652e3bc1ec294601c8e", "role": "extractor", "mode": "curated_synthetic", "schema_version": 1, "prompt_version": 1, "rule_version": "1.0.0", "source_path": "evals/synthetic/inputs/SYN-DISCOUNT-TAKEN-001.txt", "provenance_note": "Purpose-built synthetic discount-taken case. Confidence is fixture confidence, not model confidence."},
+  "response": {
+    "invoice_id": {"value": "SYN-DISCOUNT-TAKEN-001", "page": 1, "quote": "Invoice #: SYN-DISCOUNT-TAKEN-001", "confidence": 0.99},
+    "vendor_name": {"value": "Ostrander Pallet Works Inc.", "page": 1, "quote": "Vendor: Ostrander Pallet Works Inc.", "confidence": 0.99},
+    "vendor_address": {"value": "2200 Quarry Road, Toledo, OH 43604, United States", "page": 1, "quote": "Address: 2200 Quarry Road, Toledo, OH 43604, United States", "confidence": 0.99},
+    "payment_terms": {"value": "1.5/10 Net 40", "page": 1, "quote": "Payment Terms: 1.5/10 Net 40", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 3318.20", "page": 1, "quote": "Total: EUR 3318.20", "confidence": 0.99},
+    "company_code": {"value": "3000", "page": 1, "quote": "Company code: 3000", "confidence": 0.99},
+    "po_reference": {"value": "4500391385", "page": 1, "quote": "PO Reference: 4500391385", "confidence": 0.99},
+    "flags": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "metadata": {"source_sha256": "b071b5ecf2c25af01a55489913d49b8e94670ea9696b2f3761f299775c0de63d", "role": "extractor", "mode": "curated_synthetic", "schema_version": 1, "prompt_version": 1, "rule_version": "1.0.0", "source_path": "evals/synthetic/inputs/SYN-OVER60-001.txt", "provenance_note": "Purpose-built synthetic over-60 case without express agreement. Confidence is fixture confidence, not model confidence."},
+  "response": {
+    "invoice_id": {"value": "SYN-OVER60-001", "page": 1, "quote": "Invoice #: SYN-OVER60-001", "confidence": 0.99},
+    "vendor_name": {"value": "Corrigan Resin & Film S.A.", "page": 1, "quote": "Vendor: Corrigan Resin & Film S.A.", "confidence": 0.99},
+    "vendor_address": {"value": "Rue des Forges 17, 4000 Liege, Belgium", "page": 1, "quote": "Address: Rue des Forges 17, 4000 Liege, Belgium", "confidence": 0.99},
+    "payment_terms": {"value": "Net 80 Days", "page": 1, "quote": "Payment Terms: Net 80 Days", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 6128.60", "page": 1, "quote": "Total: EUR 6128.60", "confidence": 0.99},
+    "company_code": {"value": "3000", "page": 1, "quote": "Company code: 3000", "confidence": 0.99},
+    "po_reference": {"value": "4500391629", "page": 1, "quote": "PO Reference: 4500391629", "confidence": 0.99},
+    "flags": []
+  }
+}

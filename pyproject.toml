@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoice-term-agent"
+version = "0.1.0"
+description = "Invoice payment-term agent that stages ingestion-ready AP records for ERP and BI systems (sandbox proof of concept)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "anyio==4.15.1",
+    "httpx2==2.16.0",
+    "mcp==2.3.0",
+    "mcp-types==2.3.0",
+    "pydantic==2.14.1",
+]
+
+[project.optional-dependencies]
+test = ["jsonschema==4.26.0"]
+
+[project.scripts]
+invoice-agent = "invoice_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

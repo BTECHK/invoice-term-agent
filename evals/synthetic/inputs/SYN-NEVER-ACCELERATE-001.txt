@@ -1,0 +1,8 @@
+Invoice #: SYN-NEVER-ACCELERATE-001
+Vendor: Hollis Chemical Distribution Ltd
+Address: Unit 9, Harbour Trading Estate, Cork, T12 AB34, Ireland
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391574
+Total: EUR 5391.35
+Payment Terms: 1.5/10 Net 35

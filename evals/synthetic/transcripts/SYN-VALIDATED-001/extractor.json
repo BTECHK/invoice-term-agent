@@ -1,0 +1,13 @@
+{
+  "metadata": {"source_sha256": "19718bee67f89c71139f5a8fbb40e936b6e5f2e26b3fac616fc8c0e21a66b860", "role": "extractor", "mode": "curated_synthetic", "schema_version": 1, "prompt_version": 1, "rule_version": "1.0.0", "source_path": "evals/synthetic/inputs/SYN-VALIDATED-001.txt", "provenance_note": "Purpose-built synthetic validated-term case. Confidence is fixture confidence, not model confidence."},
+  "response": {
+    "invoice_id": {"value": "SYN-VALIDATED-001", "page": 1, "quote": "Invoice #: SYN-VALIDATED-001", "confidence": 0.99},
+    "vendor_name": {"value": "Marrow & Finch Strapping Inc.", "page": 1, "quote": "Vendor: Marrow & Finch Strapping Inc.", "confidence": 0.99},
+    "vendor_address": {"value": "815 Foundry Street, Dayton, OH 45402, United States", "page": 1, "quote": "Address: 815 Foundry Street, Dayton, OH 45402, United States", "confidence": 0.99},
+    "payment_terms": {"value": "Net 30 Days", "page": 1, "quote": "Payment Terms: Net 30 Days", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 2236.75", "page": 1, "quote": "Total: EUR 2236.75", "confidence": 0.99},
+    "company_code": {"value": "3000", "page": 1, "quote": "Company code: 3000", "confidence": 0.99},
+    "po_reference": {"value": "4500391217", "page": 1, "quote": "PO Reference: 4500391217", "confidence": 0.99},
+    "flags": []
+  }
+}

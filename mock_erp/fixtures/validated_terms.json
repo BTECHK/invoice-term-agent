@@ -1,0 +1,4 @@
+{
+  "description": "validated_payment_terms rows. Empty: no validated term is on file for any vendor and company code in this set. Columns follow validated_terms in integration/agent-tools.yaml.",
+  "records": []
+}

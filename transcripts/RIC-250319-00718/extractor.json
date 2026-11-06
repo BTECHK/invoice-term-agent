@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "source_sha256": "74226191aa45602eede671273d34fa6d56c32866ba71f245d09a8a4d5d665a4b",
+    "role": "extractor",
+    "mode": "curated_synthetic",
+    "schema_version": 1,
+    "prompt_version": 1,
+    "rule_version": "1.0.0",
+    "source_path": "evals/golden/invoices/RIC-250319-00718.pdf",
+    "provenance_note": "Human-curated from rendered page 1. Confidence is fixture confidence, not a recorded model confidence."
+  },
+  "response": {
+    "invoice_id": {"value": "RIC-250319-00718", "page": 1, "quote": "Invoice number\nRIC-250319-00718", "confidence": 0.99},
+    "vendor_name": {"value": "Rhenish Ink & Coatings GmbH", "page": 1, "quote": "SUPPLIER\nRhenish Ink & Coatings GmbH", "confidence": 0.99},
+    "vendor_address": {"value": "Gewerbepark Nord 9\n41460 Neuss\nGermany", "page": 1, "quote": "Gewerbepark Nord 9\n41460 Neuss\nGermany", "confidence": 0.99},
+    "payment_terms": {"value": "1.5/15 NET 70", "page": 1, "quote": "Payment terms\nNet 70 days\nEarly payment discount\n1.5/15 NET 70", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 5,669.28", "page": 1, "quote": "Amount due EUR 5,669.28", "confidence": 0.99},
+    "company_code": {"value": "3200", "page": 1, "quote": "CUSTOMER\nCorvane Packaging B.V.\nCompany code 3200", "confidence": 0.99},
+    "po_reference": {"value": "0300184729", "page": 1, "quote": "Purchase order reference\n0300184729", "confidence": 0.99},
+    "flags": []
+  }
+}

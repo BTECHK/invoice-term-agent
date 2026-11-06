@@ -1,0 +1,8 @@
+Invoice #: SYN-DISCOUNT-DECLINED-001
+Vendor: Brandt & Lowry Adhesives GmbH
+Address: Marktstrasse 22, 50667 Cologne, Germany
+Bill to: Corvane Packaging GmbH
+Company code: 3000
+PO Reference: 4500391460
+Total: EUR 4472.90
+Payment Terms: 0.5/10 Net 55

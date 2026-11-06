@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "source_sha256": "fd18269605241f182b94803ddf4f7103e92b6021a18d6cb630458b136152f1a1",
+    "role": "extractor",
+    "mode": "curated_synthetic",
+    "schema_version": 1,
+    "prompt_version": 1,
+    "rule_version": "1.0.0",
+    "source_path": "evals/golden/invoices/NBF-0051376.png",
+    "provenance_note": "Human-curated from page 1 after visual inspection. Confidence is fixture confidence, not a recorded model confidence."
+  },
+  "response": {
+    "invoice_id": {"value": "NBF-0051376", "page": 1, "quote": "INVOICE NO.\nNBF-0051376", "confidence": 0.99},
+    "vendor_name": {"value": "Ninebark Freight & Logistics LLC", "page": 1, "quote": "Ninebark Freight & Logistics LLC", "confidence": 0.99},
+    "vendor_address": {"value": "4100 Cargo Way\nColumbus, OH 43219\nUnited States", "page": 1, "quote": "4100 Cargo Way\nColumbus, OH 43219\nUnited States", "confidence": 0.99},
+    "payment_terms": {"value": "Payment is due within 30 days of invoice date.", "page": 1, "quote": "Payment is due within 30 days of invoice date.", "confidence": 0.99},
+    "invoice_value": {"value": "EUR 4,028.50", "page": 1, "quote": "TOTAL DUE EUR 4,028.50", "confidence": 0.99},
+    "company_code": {"value": "2100", "page": 1, "quote": "BILL TO\nCorvane Packaging GmbH\nCompany code 2100", "confidence": 0.99},
+    "po_reference": {"value": "4500219846", "page": 1, "quote": "CUSTOMER PO\n4500219846", "confidence": 0.99},
+    "flags": []
+  }
+}

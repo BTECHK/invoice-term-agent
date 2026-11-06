@@ -1,0 +1,133 @@
+# Term rules: the deterministic rules for UC-1 (term check and date proposal) and the routing
+# into UC-2 (exception resolution). The rules code reads these values. The model never changes
+# them and never does the arithmetic. A change here is a rule change: bump version, run the eval
+# gate (ADR-005). The version is written into every proposal as rule_version.
+#
+# Same YAML subset as tool-policy.yaml (block maps, lists of scalars, flow lists, no lists of maps).
+
+version: "1.0.0"
+
+# Q-1: the cost of capital is assumed. The discount rule and the money impact figures use it.
+cost_of_capital: 0.05
+cost_of_capital_status: "assumed, open question Q-1"
+
+# German Civil Code (BGB) section 271a(1): a term over 60 days is effective only if it is
+# expressly agreed and not grossly unfair to the creditor. A validated term on file does not by
+# itself prove an express agreement, so an over 60 day term is always an exception until a
+# person confirms the agreement.
+max_term_days_without_express_agreement: 60
+express_agreement:
+  proof: person_confirmation
+  recorded_in: validated_payment_terms.express_agreement
+  until_confirmed: route_to_over_60_days
+
+# Three terms are compared: printed on the invoice, on the purchase order (PO, po_term_days) and in the vendor
+# master (master_term_days). A fourth source is the validated term register.
+longest_validated_term:
+  rule: "the governing term is the longest term among the sources that are agreed or validated, and never over 60 days unless a person has confirmed an express agreement"
+  agreed_means: "the printed, PO and vendor master terms are equal"
+  validated_means: "a row for this vendor and company code in validated_payment_terms covers the term"
+  term_source_tie_break: [validated, po, vendor_master, printed]
+  no_candidate: no-validated-term
+  note: "SAP computes the due date. The proposal is a term or a baseline date change, expressed as days after the baseline date."
+
+# Cash discount. Annualized = (rate / (1 - rate)) * (day_count_basis / (net_days - discount_days)).
+# Example: 1/10 net 45 annualizes to 0.01 / 0.99 x 365 / 35 = 10.5 percent a year.
+discount_rule:
+  day_count_basis: 365
+  take_when: "annualized discount is above cost_of_capital"
+  eligibility: "the discount appears in the PO term, the vendor master term or a validated term; a discount printed only on the invoice is an exception"
+  eligibility_route: discount-eligibility
+  when_taken: "propose the discount day as proposed_payment_day"
+  never_for: vendor_exceptions
+  sap_limits: "the SAP payment program (minimum discount, tolerance days, next run date) still decides capture; a person edits the proposal and releases the run"
+
+# Tolerances borrowed from a published accounts payable skill. Every exception carries both
+# numbers and the money impact. The per line price rule needs line items, which the pilot
+# extraction does not read (seven header fields only), so only total_variance_pct runs in the pilot.
+tolerances:
+  price_variance_pct: 2
+  price_variance_abs: 25
+  price_variance_rule: "flag when the variance is above the larger of the percent and the absolute amount, per line"
+  price_variance_status: "extension, out of pilot"
+  total_variance_pct: 1
+  total_variance_basis: "percent of PO value"
+  absolute_unit: "invoice currency units; 25 is the borrowed default, to be confirmed with AP"
+  currency_check: "compare only in one currency; the ERP data and the invoice can carry different currencies, so a missing or different currency is an exception"
+
+# Never accelerated: vendors whose lines arrive late far more often than the portfolio average,
+# so paying earlier removes the only leverage. Procurement owns this list; a person adds or removes
+# a vendor, and no data threshold changes it.
+vendor_exceptions:
+  never_accelerate:
+    - V31204
+    - V58871
+    - V37729
+  proposal_for_these_vendors: "the governing term only; no discount day, no earlier day"
+  reason_code: NEVER_ACCELERATE_VENDOR
+
+# Rules that recur in purchasing data; measure each share per deployment.
+data_rules:
+  weaker_po_term_needs_approval:
+    when: "the PO term is shorter than the vendor master term for the same vendor and company code"
+    route: no-validated-term
+    approver: "Procurement (assumed, Q-2)"
+    seen_on: "a recurring pattern in purchasing data; measure the share per deployment"
+  blocked_po_with_receipt_and_no_release:
+    when: "the PO has po_blocked and goods_receipt_posted events and no po_released event"
+    route: po-not-approved-or-receipted
+    kind: control_exception
+    action: "nudge the buyer through a worklist task"
+    seen_on: "most blocked PO lines in typical purchasing data; measure per deployment"
+  invoice_before_po:
+    when: "invoice_received is earlier than po_line_created"
+    route: missing-or-wrong-po
+    action: "route to the buyer"
+    seen_on: "a minority of PO lines; measure per deployment"
+
+# A field below this confidence is treated as unreadable. Starting value, tune in shadow mode.
+min_field_confidence: 0.80
+
+# Where an unreadable field goes. invoice_id has no skill: without it no record can be written,
+# so the file returns to the clerk outside the agent.
+unreadable_field_routes:
+  invoice_id: hard_stop
+  po_reference: missing-or-wrong-po
+  vendor_name: supplier-or-remittance-mismatch
+  vendor_address: supplier-or-remittance-mismatch
+  company_code: supplier-or-remittance-mismatch
+  payment_terms: no-validated-term
+  invoice_value: value-outside-tolerance
+
+# Extraction flags that always route to supplier-or-remittance-mismatch, with no draft and no proposal.
+flag_routes_to_supplier_hold:
+  - instruction_in_document
+  - bank_or_remit_to_change
+  - urgent_payment_request
+  - other_money_or_credential_ask
+
+# When several exceptions apply the worklist record lists all of them in this order and the
+# proposal reason_code names the first.
+exception_precedence:
+  - supplier-or-remittance-mismatch
+  - missing-or-wrong-po
+  - po-not-approved-or-receipted
+  - over-60-days
+  - no-validated-term
+  - discount-eligibility
+  - value-outside-tolerance
+
+# Must match the enum in schemas/proposal.json.
+reason_codes:
+  AGREED_TERM: "printed, PO and vendor master terms are equal; the agreed term governs"
+  VALIDATED_LONGER_TERM: "the terms differ and a validated term covers the longest one; it governs"
+  DISCOUNT_TAKEN: "the annualized discount is above the cost of capital and the discount is validated; pay on the discount day"
+  DISCOUNT_DECLINED: "a validated discount is offered but does not beat the cost of capital; pay on the governing term"
+  NEVER_ACCELERATE_VENDOR: "the vendor is on the never accelerate list; pay on the governing term only"
+  NO_VALIDATED_TERM: "the terms differ and no validated term covers them"
+  OVER_60_DAYS: "a candidate term is over 60 days and no person has confirmed an express agreement"
+  MISSING_OR_WRONG_PO: "no PO, a PO that does not match, or an invoice before the PO"
+  PO_NOT_APPROVED_OR_RECEIPTED: "the PO is blocked with no logged release, or has no goods receipt"
+  SUPPLIER_OR_REMITTANCE_MISMATCH: "the supplier, company code or payment details do not match, or the document carries a flag"
+  DISCOUNT_ELIGIBILITY: "a discount is printed that the PO, the vendor master and the register do not carry"
+  VALUE_OUTSIDE_TOLERANCE: "the invoice value differs from the PO value by more than the total tolerance"
