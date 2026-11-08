@@ -411,7 +411,7 @@ def read_main(argv: list[str]) -> int:
             failures += 1
             continue
         try:
-            reading = read_document(resolved)
+            reading = read_document(resolved, max_pages=policy.max_pages)
             extraction = extract(reading)
         except ReadError as exc:
             print(f"FAIL {path.name}: {exc}", file=sys.stderr)

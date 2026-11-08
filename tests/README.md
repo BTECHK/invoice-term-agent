@@ -1,6 +1,6 @@
 # Essential tests
 
-`make test` runs 77 behavior tests in four files: 13 workflow tests, 15 control tests, 42 hardening tests and 7 reader tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains. The reader tests run the local OCR reader over the six golden invoices and three image-only copies of the PDFs, which takes about a minute on a laptop.
+`make test` runs 78 behavior tests in four files: 13 workflow tests, 15 control tests, 42 hardening tests and 8 reader tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains. The reader tests run the local OCR reader over the six golden invoices and three image-only copies of the PDFs, which takes about a minute on a laptop. Before the reader turned OpenCV's own threading off, two of eight full-suite runs crashed inside OpenCV's resize during the reader tests; since then every run has passed, and one unreproduced crash was seen in a verifier's own probe process.
 
 ## Keep
 
@@ -27,7 +27,7 @@ Expected payment outcomes are explicit constants, not computed by the runtime un
 
 - The reader runs with the socket module blocked and writes one transcript per golden invoice: the three PDFs from their text layer, the three PNGs by OCR.
 - After replay verification, all 42 field values equal the labels in `evals/golden/expected.json` under the grader's comparison, with no null value; the test prints the 6 by 7 table.
-- A quote appended to, re-cased or moved to another page quarantines that invoice while the untouched invoices are written.
+- A quote appended to, re-cased or moved to another page, a flag the guard does not find in the reading, and a null field that still carries a quote each quarantine that invoice while the untouched invoice is written. A PDF with 11 pages is refused by the reader and by `invoice-agent read`, which writes no transcript for it.
 - Each field's confidence is the lowest recognizer score over the lines it quotes; text-layer fields record 1.0.
 - An image-only copy of each PDF (the page rendered at 200 dpi, no text layer) reads through the OCR path with the same 21 field values.
 - The injection PNG yields bank-change and instruction flags from its pixels, with the account masked.

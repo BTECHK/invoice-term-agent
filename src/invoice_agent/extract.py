@@ -114,6 +114,8 @@ def _verify_reading_quotes(extraction: Extraction, reading: list[tuple[int, str,
     for name in FIELD_NAMES:
         field = getattr(extraction, name)
         if field.value is None:
+            if (field.quote and field.quote.strip()) or field.page is not None:
+                raise ReplayError(f"{name} has no value but carries a quote or page")
             continue
         if not field.quote or not field.quote.strip():
             raise ReplayError(f"{name} has no quote in a reader transcript")
@@ -220,8 +222,16 @@ def load_replay(
         quotes.append((source_bytes.decode("utf-8", errors="replace"), None))
     else:
         assert reading is not None
+        # A reader transcript may carry only the flags the guard finds in its own reading; any other flag is
+        # evidence the reader never saw.
+        supported = set()
         for page in sorted({page for page, _, _ in reading}):
-            quotes.append(("\n".join(text for p, text, _ in reading if p == page), page))
+            text = "\n".join(text for p, text, _ in reading if p == page)
+            supported.update((hit.type, hit.quote[:240], page) for hit in scan_text(text))
+            quotes.append((text, page))
+        for flag in extraction.flags:
+            if (flag.type, flag.quote, flag.page) not in supported:
+                raise ReplayError("a transcript flag is not supported by the reading")
     for quote, page in quotes:
         for hit in scan_text(quote):
             key = (hit.type, hit.quote, page)

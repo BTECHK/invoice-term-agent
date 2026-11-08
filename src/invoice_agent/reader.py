@@ -237,8 +237,11 @@ def _text_layer_lines(page_object: Any, page: int) -> list[Line]:
     return lines
 
 
-def read_document(path: Path) -> Reading:
-    """Every line of every page, from the text layer when the PDF has one, else from OCR."""
+def read_document(path: Path, *, max_pages: int = MAX_PAGES) -> Reading:
+    """Every line of every page, from the text layer when every page has one, else from OCR.
+
+    A PDF with more pages than the cap is refused rather than read in part, so no page can go unread.
+    """
     path = Path(path)
     suffix = path.suffix.lower()
     if suffix == ".pdf":
@@ -251,7 +254,9 @@ def read_document(path: Path) -> Reading:
         with document:
             if document.page_count == 0:
                 raise ReadError(f"PDF has no pages: {path.name}")
-            count = min(document.page_count, MAX_PAGES)
+            if document.page_count > max_pages:
+                raise ReadError(f"PDF has {document.page_count} pages; the reader reads at most {max_pages}: {path.name}")
+            count = document.page_count
             # Page objects are used one at a time and never kept past the document, which MuPDF requires.
             layered = all(len(document[i].get_text().strip()) >= MIN_TEXT_LAYER_CHARS for i in range(count))
             lines: list[Line] = []

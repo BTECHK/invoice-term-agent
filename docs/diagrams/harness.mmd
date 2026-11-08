@@ -26,7 +26,7 @@ flowchart TB
   subgraph GATE[Gates before merge]
     G1[scripts/check.py<br/>policy vs settings vs contract vs agents,<br/>hook wired, skill mirrors, pins, secrets]
     G2[evals/grade.py<br/>golden and injection cases,<br/>six gates at 1.0, reason-code enum]
-    G3[tests/<br/>77 behaviour, hardening and reader tests:<br/>CLI, MCP, hook, guard, grader, OCR]
+    G3[tests/<br/>78 behaviour, hardening and reader tests:<br/>CLI, MCP, hook, guard, grader, OCR]
     G4[CI: tests, check, gitleaks over history,<br/>zizmor, SHA-pinned actions, hash-locked deps]
   end
   P1 --> H1

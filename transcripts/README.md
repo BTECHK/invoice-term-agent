@@ -4,11 +4,12 @@ Each folder holds the transcript the local reader wrote for one golden invoice: 
 
 ## How a transcript is produced
 
-- A PDF whose pages carry a text layer (at least 50 characters per page) is read from that layer with PyMuPDF. Mode `pdf_text_layer`; every quote is a line of the layer; confidence is 1.0 because no recognition took place. KBP-2025-0417, RIC-250319-00718 and FPC-25-10733 are read this way.
-- A PDF without a text layer, or a PNG, JPEG or TIFF image, is read by OCR with RapidOCR and the PP-OCRv4 detection and recognition models that ship inside the `rapidocr-onnxruntime` wheel. Nothing is downloaded and no network call is made. Mode `local_ocr`. NBF-0051376, PCS-25-03917 and DLP-2025-0907 are read this way.
+- A PDF whose every page carries a text layer (at least 50 characters per page) is read from that layer with PyMuPDF. Mode `pdf_text_layer`; every quote is a line of the layer; confidence is 1.0 because no recognition took place. KBP-2025-0417, RIC-250319-00718 and FPC-25-10733 are read this way.
+- A PDF with any page lacking a text layer, or a PNG, JPEG or TIFF image, is read in full by OCR with RapidOCR and the PP-OCRv4 detection and recognition models that ship inside the `rapidocr-onnxruntime` wheel. Nothing is downloaded and no network call is made. Mode `local_ocr`. NBF-0051376, PCS-25-03917 and DLP-2025-0907 are read this way.
 - Each OCR page is recognized twice, as supplied and scaled to a 3500 pixel long side, because the recognizer drops the space between two words at some sizes and keeps it at others. Per line, the reading with more spaces is kept, then the higher score. Dropped word boundaries are re-opened, the letter o inside an IBAN is read as the digit 0, and a mixed-case legal form at the end of a line is re-cased from the legal-form table in `rules.py`.
 - The seven fields are found by label-anchored parsers: a value is read inline after its label, else from the nearest line to the right on the same row, else from the nearest aligned line below. The supplier name comes from the line under a From, Supplier or Vendor heading, else the letterhead, else a Remit to block; the address is the aligned block under an Address heading or under the name.
 - The guard runs over the full text of every page the reader kept. Its hits are the `flags`, with accounts masked.
+- A PDF with more than 10 pages is refused, not read in part, so no page goes unread.
 
 ## What a transcript contains
 
@@ -27,7 +28,7 @@ A quote is one line of the reading, or several lines joined with `\n`. A field's
 
 ## What the replay verifies
 
-The `source_sha256` binds the transcript to the exact bytes of its source. For a PDF or image source the replay also requires a reader transcript with its reading, and for every field with a value: a non-empty quote whose lines each equal a line of the reading on the field's page, in reading order, with whitespace folded and case kept; and the value inside its quote. A quote edited by hand, moved to another page or stitched from text the reader never kept quarantines the invoice. The replay also re-scans the stored reading with the guard, so an instruction printed on the page is flagged even if the `flags` list were edited away.
+The `source_sha256` binds the transcript to the exact bytes of its source. For a PDF or image source the replay also requires a reader transcript with its reading, and for every field with a value: a non-empty quote whose lines each equal a line of the reading on the field's page, in reading order, with whitespace folded and case kept; and the value inside its quote. A quote edited by hand, moved to another page or stitched from text the reader never kept quarantines the invoice. A field without a value carries no quote and no page. The `flags` list may hold only flags the guard finds in the stored reading; any other flag quarantines the invoice. The replay also re-scans the stored reading with the guard, so an instruction printed on the page is flagged even if the `flags` list were edited away.
 
 The reading itself is bound to the page by the source hash and by `tests/test_reader.py`, which re-runs the reader on the six invoices and compares values, quotes and confidence (within 0.02) with these files. It is not re-recognized on every replay.
 
