@@ -134,10 +134,10 @@ def validate_runtime_record(iid, expected, rec):
     missing = required_provenance - set(provenance)
     if missing:
         raise DataError(f"{iid}: provenance missing {sorted(missing)}")
-    if provenance["mode"] != "curated_synthetic":
+    if provenance["mode"] not in ("local_ocr", "pdf_text_layer", "curated_synthetic"):
         raise DataError(f"{iid}: unsupported replay mode {provenance['mode']!r}")
     if set(provenance) & {"provider", "model", "model_id", "executed_at"}:
-        raise DataError(f"{iid}: curated replay must not claim provider/model execution history")
+        raise DataError(f"{iid}: a replay must not claim provider or model execution history")
     expected_source = f"evals/golden/{expected['file']}"
     if provenance["source_path"] != expected_source:
         raise DataError(f"{iid}: source_path {provenance['source_path']!r}, expected {expected_source!r}")

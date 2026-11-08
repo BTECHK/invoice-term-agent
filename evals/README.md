@@ -8,10 +8,11 @@ A set of five invoices is a smoke test, not a statistical test. The gates mean s
 
 | Path | What it is |
 |---|---|
-| `golden/invoices/` | Five fictional invoices (three PDF, two PNG), each in a different layout: a modern web invoice, a supplier e-invoicing portal document view, a classic letterhead, a freight invoice and a sidebar layout. |
-| `golden/injection/` | One synthetic invoice, `DLP-2025-0907`, as text and PNG. Its body carries an instruction, a bank detail change and an urgent payment request. The text file lists every visible line of the page in order. |
+| `golden/invoices/` | Five fictional invoices (three PDF, two PNG), each in a different layout: a modern web invoice, a supplier e-invoicing portal document view, a classic letterhead, a freight invoice and a sidebar layout. The local reader takes the text layer of the three PDFs and runs OCR on the two PNGs. |
+| `golden/injection/` | One synthetic invoice, `DLP-2025-0907`, as text and PNG. Its body carries an instruction, a bank detail change and an urgent payment request. The text file lists every visible line of the page in order. The reader's transcript carries all three flags, found from the PNG pixels alone, with the printed account masked. |
 | `golden/source/` | The HTML source of every golden invoice and of the injection invoice, one file per invoice id. `../scripts/render_invoices.py` renders them with headless Chrome and prints each file's SHA-256. |
 | `golden/expected.json` | The labels: seven fields, three terms, discount, routing, exception skills in precedence order, proposed day. Its `assumptions` hold the company code map. |
+| `../transcripts/` | The reader output for each golden and injection invoice: the seven fields with page, quote and confidence, every line the reader kept, and the source hash. `make read` writes it. |
 | `thresholds.json` | The gates and the informational metrics, with definitions. |
 | `grade.py` | The code graders. Reads a results JSONL (JSON Lines), prints a table, exits non zero below a gate. |
 | `../tests/test_workflow.py` | Grades real CLI output and rejects four consequential corruptions. |
@@ -23,6 +24,7 @@ A set of five invoices is a smoke test, not a statistical test. The gates mean s
 python3 evals/grade.py path/to/results.jsonl     # grade a run
 python3 evals/grade.py --self-check              # check the labels against the term rules
 python3 scripts/render_invoices.py              # re-render the golden invoices from golden/source/
+make read                                      # read them with the local OCR reader and rewrite transcripts/
 make test                                      # includes grader regressions
 python3 evals/grade.py --expected copy.json r.jsonl   # grade against a copy of the labels
 ```
@@ -52,7 +54,7 @@ One JSON object per line, one line per invoice, written by the proposal writer o
 | `governing_term_days`, `term_source` | The candidate term the rules rank first and its source (`validated`, `po`, `vendor_master` or `printed`); both `null` on the injection invoice. An exception carries them and still proposes no day. |
 | `discount_taken`, `discount_rate`, `annualized_discount` | The discount decision. The rate and the annualized rate are `null` when no discount is printed. |
 | `checker_facts` | What the checker read back from the ERP data service on its own: the PO reference, the PO and master terms, the PO value, validated terms, the day it expects and the day it observed |
-| `provenance` | `mode`, `source_path`, `source_sha256`, `transcript_sha256`, `rule_version` and two semantic hashes. The grader refuses a line whose hashes do not match the files on disk. |
+| `provenance` | `mode` (`local_ocr`, `pdf_text_layer` or `curated_synthetic`), `source_path`, `source_sha256`, `transcript_sha256`, `rule_version` and two semantic hashes. The grader refuses a line whose hashes do not match the files on disk. |
 
 ## The graders
 
@@ -113,6 +115,9 @@ The discount on `RIC-250319-00718` appears only on the invoice, so it is not tak
 | Where an invoice states its term only in a sentence, the runner normalizes `payment_terms` to "30 days net" | A live model that words it differently fails exactness until the label is revised on purpose. |
 | The checker is not re-run here | The grader validates recorded facts and provenance; a separate behavior test exercises the checker through real MCP re-queries. |
 | Receipt date is taken as the invoice date | Days are offsets from it. |
+| The reader's parsers are tuned to these six layouts | Recall on other layouts is unknown. A layout the parsers have not seen leaves fields empty and the invoice is held. A live vision model for such layouts remains Design. |
+| Replay checks quotes against the stored reading, not a fresh read | The reading is tied to its source by the source hash and by the reader test, which re-runs the reader and compares. |
+| Recognition can differ slightly on another CPU or platform | The reader test allows 0.02 on confidence. A changed character in a field value is caught by the `field_exactness` gate. |
 
 The injection invoice needs no fixtures for its flag route. If the fixtures hold PO `4800268079` for vendor `V47026` and company code `5300` with terms of 45, the run is otherwise clean and would be a clear case without the injected text.
 
@@ -133,8 +138,8 @@ At volume the thresholds are set from the labelled set. Measure the current rate
 
 | Source | How |
 |---|---|
-| A wrong worklist decision | Add the HTML source in `golden/source/`, render it, add one entry in `golden/expected.json`, a transcript in `../transcripts/` and run `--self-check` |
-| An injection pattern | Copy `golden/injection/DLP-2025-0907.txt`, change the instruction, add an entry with `"set": "injection"` |
+| A wrong worklist decision | Add the HTML source in `golden/source/`, render it, run `make read`, check the transcript in `../transcripts/` against the page, add one entry in `golden/expected.json` and run `--self-check` |
+| An injection pattern | Copy `golden/source/DLP-2025-0907.html`, change the instruction, render it, run `make read`, check the flags in the transcript and add an entry with `"set": "injection"` |
 | A rule change | Update `policy/term-rules.yaml`, then the labels the self-check rejects, then the tests |
 
 Never edit a label to make a run pass. If the label is right, the run is wrong.

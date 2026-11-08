@@ -4,7 +4,7 @@ Instructions for any AI coding agent working in this repository. This file is th
 
 ## What this is
 
-Invoice Term Agent is a proof of concept that prepares supplier-invoice data for downstream ingestion into an ERP (SAP-style accounts payable) and a business intelligence (BI) system. It supports Procurement, Finance and accounts payable (AP) on SAP ECC. Status: sandbox build under verification; authenticated approvals, model-family execution and production integration remain Design. Steps 1 to 4 of the flow (read the invoice, compare it through the ERP data service, check the term, propose the date) run in the sandbox against curated replays and a mock service; steps 5 and 6 (approve and update SAP, release and track) are Design. Read `README.md` first, then `docs/README.md` for the ID system.
+OCR Invoice Term Agent is a proof of concept that prepares supplier-invoice data for downstream ingestion into an ERP (SAP-style accounts payable) and a business intelligence (BI) system. It supports Procurement, Finance and accounts payable (AP) on SAP ECC. Status: sandbox build under verification; authenticated approvals, model-family execution and production integration remain Design. Steps 1 to 4 of the flow (read the invoice, compare it through the ERP data service, check the term, propose the date) run in the sandbox with a local OCR reader (not curated replays) and a mock service; steps 5 and 6 (approve and update SAP, release and track) are Design. Read `README.md` first, then `docs/README.md` for the ID system.
 
 ## The one hard rule
 
@@ -16,7 +16,7 @@ Development mode: a person who edits this repository with a coding agent sets `A
 
 ## Facts you need
 
-- Seven invoice fields: vendor_name, vendor_address, payment_terms, invoice_value, company_code, po_reference, invoice_id. Each extracted field carries page, quote and confidence. An unreadable field stays empty and is named; nothing is rounded to something plausible.
+- Seven invoice fields: vendor_name, vendor_address, payment_terms, invoice_value, company_code, po_reference, invoice_id. Each extracted field carries page, quote and confidence. Each quote is a line of the reader's reading, and replay quarantines an invoice whose quote is not. An unreadable field stays empty and is named; nothing is rounded to something plausible.
 - Three terms: printed on the invoice, on the purchase order, in the vendor master. Clear case: they agree, or a validated term is on file for the vendor and company code. Anything else is an exception.
 - Date rule: the longest validated term; never over 60 days without express agreement (German civil code, BGB 271a); a cash discount when its annualized rate beats the cost of capital (5% assumed, open question Q-1).
 - Tolerances: price variance above 2% or 25 per line, total variance above 1% of the order value.
@@ -26,20 +26,21 @@ Development mode: a person who edits this repository with a coding agent sets `A
 ## Commands
 
 ```
+make read     # read the six golden invoices with the local OCR reader and rewrite transcripts/
 make demo     # golden invoices plus the injection case, end to end against the mock ERP data service, offline
 make test     # essential behavior checks, including the real-output grader
 make check    # scripts/check.py: skills, schemas, mirrors, settings, hook wiring, deny list, subagent limits, secrets, dashes
 python3 evals/grade.py results.jsonl   # code graders against evals/thresholds.json
 ```
 
-Everything runs offline with no API key: the model steps replay from `transcripts/`. The offline runtime never calls a network. Dependency installation is a separate build step.
+Everything runs offline with no API key. The reader runs on the machine (RapidOCR models inside the wheel) and the run replays its transcripts from `transcripts/`. The offline runtime never calls a network. Dependency installation is a separate build step.
 
 ## Repository map
 
 | Folder | What it holds | Who owns changes |
 |---|---|---|
 | docs/ | PRD, SRS, architecture with ADRs, threat model | design; every change updates the trace table |
-| src/invoice_agent/ | rules, extraction interface, proposal writer, skill runner, worklist, audit, CLI | code; rules own all date math and parsing |
+| src/invoice_agent/ | local OCR reader (`reader.py`), rules, extraction interface that replays reader transcripts, proposal writer, skill runner, worklist, audit, CLI | code; rules own all date math and parsing |
 | mock_erp/ | stdio MCP server with the nine ERP data service tool names; read tools answer from fixtures, write tools refuse | fixtures only; never make a write tool succeed |
 | policy/ | tool-policy.yaml (source of truth for tools and caps), term-rules.yaml, models.yaml | a change here needs an ADR note |
 | schemas/ | JSON Schema for extraction, proposal, worklist record, audit event | additive only; additionalProperties stays false |

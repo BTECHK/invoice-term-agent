@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Golden labels for five fictional invoices and one synthetic injection invoice. Field values are copied from the curated extraction transcripts in transcripts/. Terms are set in the PO and vendor master fixtures in mock_erp/fixtures/.",
+  "description": "Golden labels for five fictional invoices and one synthetic injection invoice. Field values are what each page prints; the local reader's transcripts in transcripts/ must reproduce them. Terms are set in the PO and vendor master fixtures in mock_erp/fixtures/.",
   "rule_source": "policy/term-rules.yaml: an agreed or validated term governs, any candidate term over 60 days is an exception, a discount printed only on the invoice is not taken. schemas/proposal.json: an exception reason code forces proposed_payment_day to null.",
   "assumptions": {
     "cost_of_capital_pct": 5.0,

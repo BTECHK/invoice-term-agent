@@ -6,13 +6,13 @@ The agent reads through a read-only ERP data service (a Model Context Protocol (
 
 Identifiers (IDs) in this file point into the other documents: US user story, BR business rule, UC use case, FR functional requirement, NFR non-functional requirement, ADR architecture decision record, T threat, Q open question. See [README.md](README.md).
 
-The sandbox replays steps 1 to 4 of the flow below from source-grounded curated extraction fixtures, against a mock ERP data service, with a deterministic checker and local worklist records. Steps 5 and 6 are design.
+The sandbox runs steps 1 to 4 of the flow below against a mock ERP data service, with a deterministic checker and local worklist records. It reads invoices with a local optical character recognition (OCR) reader, text layer first, and replays the resulting transcripts. Steps 5 and 6 are design.
 
 ## 1. The flow
 
 | Step | What happens | Status here |
 |---|---|---|
-| 1 Read the invoice | A reader returns seven fields from the invoice file, each with value, page, quote and confidence. Production Design uses a vision model for varied PDF (portable document format), image or e-invoice layouts | Replayed from curated fixtures; the production reader remains Design |
+| 1 Read the invoice | A reader returns seven fields from the invoice file, each with value, page, quote and confidence. Production Design uses a vision model for varied PDF (portable document format), image or e-invoice layouts | The local reader runs in the sandbox (RapidOCR models in its wheel, text layer for PDFs that have one); a production vision reader for unseen layouts remains Design |
 | 2 Compare it in the ERP data | The fields are compared with the PO, goods receipt and supplier record, next to the match SAP already ran | Read tools against the mock ERP data service |
 | 3 Check the term | Printed, PO and vendor master terms agree, or a validated term is on file: clear. Otherwise an exception | Runnable in the sandbox; production remains Design |
 | 4 Propose the payment date | Longest validated term, never over 60 days without express agreement, discount when it beats the cost of capital, reason code on every proposal | Runnable in the sandbox; production remains Design |
@@ -161,4 +161,4 @@ Exceptions and payment run release stay with a person at every stage (ADR-003).
 | Q-4 | How many minutes does one exception touch take? | 8 in the ADR-010 illustration only | A time study of AP clerks |
 | Q-5 | What is the exact late balance by term? | Nothing assumed | A read query against the ERP reporting layer during the build |
 | Q-6 | Can the baseline date of a posted invoice change under the organization's SAP document change rules (OB32)? | Unknown; the PO term path is the fallback | Sandbox test |
-| Q-7 | Which capture tool does the organization license (SAP Document Information Extraction, OpenText Vendor Invoice Management (VIM), none)? | No capture product assumed; the sandbox replays curated extraction fixtures; a production vision reader remains Design | AP and information technology |
+| Q-7 | Which capture tool does the organization license (SAP Document Information Extraction, OpenText Vendor Invoice Management (VIM), none)? | No capture product assumed; the sandbox uses its own local OCR reader; a production vision reader remains Design | AP and information technology |

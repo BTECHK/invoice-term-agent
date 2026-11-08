@@ -1,5 +1,6 @@
 flowchart TD
-  A[Invoice PDF or image + extraction transcript] --> B[Validate source hash, fields and envelope]
+  A[Invoice PDF or image] --> R[Local reader: text layer or RapidOCR, transcript with reading]
+  R --> B[Validate source hash, fields and envelope]
   B -->|Valid| C[Read ERP facts through fixed queries]
   B -->|Invalid| X[Audit the technical stop and quarantine the invoice]
   C --> D[Apply deterministic payment-term rules]

@@ -2,7 +2,10 @@ PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 OUTPUT ?= build/demo-output
 RUN = PYTHONPATH=src AP_AGENT_ROOT="$(CURDIR)" "$(PYTHON)"
 
-.PHONY: demo test check eval package
+.PHONY: read demo test check eval package
+
+read:
+	$(RUN) -m invoice_agent.cli read --inputs evals/golden/invoices evals/golden/injection --out transcripts
 
 demo:
 	$(RUN) -m invoice_agent.cli --output "$(OUTPUT)"

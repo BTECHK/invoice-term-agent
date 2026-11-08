@@ -33,7 +33,7 @@ flowchart TB
   subgraph GATE[Gates before merge]
     G1[scripts/check.py<br/>policy vs settings vs contract vs agents,<br/>hook wired, skill mirrors, pins, secrets]
     G2[evals/grade.py<br/>golden and injection cases,<br/>six gates at 1.0, reason-code enum]
-    G3[tests/<br/>67 behaviour and hardening tests:<br/>CLI, MCP, hook, guard, grader]
+    G3[tests/<br/>77 behaviour, hardening and reader tests:<br/>CLI, MCP, hook, guard, grader, OCR]
     G4[CI: tests, check, gitleaks over history,<br/>zizmor, SHA-pinned actions, hash-locked deps]
   end
   P1 --> H1
@@ -57,7 +57,8 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  A[Invoice PDF or image + extraction transcript] --> B[Validate source hash, fields and envelope]
+  A[Invoice PDF or image] --> R[Local reader: text layer or RapidOCR, transcript with reading]
+  R --> B[Validate source hash, fields and envelope]
   B -->|Valid| C[Read ERP facts through fixed queries]
   B -->|Invalid| X[Audit the technical stop and quarantine the invoice]
   C --> D[Apply deterministic payment-term rules]
@@ -75,7 +76,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  IN[Extraction transcript + source document] --> R
+  IN[Invoice file] --> RD["Local reader (reader.py)"]
   subgraph R[Python runner: one process]
     L[Replay loader and validator] --> D[Rules and proposal]
     D --> C[Separate checker implementation]
@@ -83,6 +84,7 @@ flowchart TD
     C --> W[Bundle writer: lock, journal, idempotency]
     E --> W
   end
+  RD --> L
   D <-->|Fixed queries via adapter| M
   C <-->|Re-query via adapter| M
   E <-->|Declared evidence queries| M

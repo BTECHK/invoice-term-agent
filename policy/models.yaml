@@ -1,5 +1,5 @@
 # Model tiers are a production design. No provider execution is part of this build.
-# Curated replay confidence is fixture metadata, not a measured model confidence.
+# OCR confidence in a transcript is the recognizer's own line score, not a provider model confidence.
 version: "1.0.0"
 
 tiers:
@@ -39,7 +39,7 @@ pinning:
   pins: null
 
 execution:
-  default: curated_synthetic
+  default: local_reader
   live_enabled: false
   checker: deterministic_separate_context
   different_family_status: Design

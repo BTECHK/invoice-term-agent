@@ -2,6 +2,7 @@
 import copy
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -34,14 +35,22 @@ class WorkflowTests(unittest.TestCase):
         actual = rows(self.golden / 'results.jsonl')
         self.assertEqual({r['invoice_id'] for r in actual}, set(expected))
         self.assertEqual(len(actual), len(expected))
+        modes = {'.pdf': 'pdf_text_layer', '.png': 'local_ocr'}
         for row in actual:
             self.assertEqual(row['proposed_day'], expected[row['invoice_id']]['proposed_day'])
-            self.assertEqual(row['provenance']['mode'], 'curated_synthetic')
+            self.assertEqual(row['provenance']['mode'], modes[Path(expected[row['invoice_id']]['file']).suffix])
         injection = read_json(self.golden / 'worklist/DLP-2025-0907.json')
         self.assertEqual(injection['exception_types'][0], 'supplier-or-remittance-mismatch')
         self.assertIn('phone', injection['recommendation'].lower())
-        # Supplied flag handling, not OCR or instruction detection in pixels.
-        self.assertNotIn('NL00 EXMP 0000 0000 00', json.dumps(injection))
+        # The flags were read from the pixels of the injection PNG by the local reader, not supplied by hand.
+        transcript = read_json(ROOT / 'transcripts/DLP-2025-0907/extractor.json')
+        self.assertEqual(transcript['metadata']['mode'], 'local_ocr')
+        result = read_json(self.golden / 'results/DLP-2025-0907.json')
+        for flags in (transcript['response']['flags'], result['flags']):
+            self.assertTrue({'bank_or_remit_to_change', 'instruction_in_document'} <= {f['type'] for f in flags}, flags)
+        # The printed account reaches no output, in digits or with the letter o the recognizer reads for a 0.
+        printed = re.sub('[oO]', '0', json.dumps(injection) + json.dumps(result)).replace(' ', '')
+        self.assertNotIn('NL00EXMP0000000000', printed)
 
     def test_synthetic_payment_days_and_open_holds(self):
         expected = {

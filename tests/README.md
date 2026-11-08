@@ -1,10 +1,10 @@
 # Essential tests
 
-`make test` runs 70 behavior tests in three files: 13 workflow tests, 15 control tests and 42 hardening tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains.
+`make test` runs 77 behavior tests in four files: 13 workflow tests, 15 control tests, 42 hardening tests and 7 reader tests. The suite includes the grader regression checks, so the normal `tests.yml` CI job runs the complete suite. No separate grader suite or duplicate evaluation workflow remains. The reader tests run the local OCR reader over the six golden invoices and three image-only copies of the PDFs, which takes about a minute on a laptop.
 
 ## Keep
 
-- Real CLI results for the golden invoices and the injection case, including supplied injection-flag handling.
+- Real CLI results for the golden invoices and the injection case, with the injection flags read from the PNG's pixels by the local reader and the printed account masked in every output.
 - Six synthetic business outcomes: equal and validated terms, discounts taken and declined, never-accelerate, and an over-60 hold; the reviewed mixed 75/90-day case must also hold. Validate the emitted proposal schema.
 - Four corruptions of actual output: missing invoice, unsafe payment day, wrong amount and forged source hash. The grader must reject each.
 - Missing/mismatched replay, a low-confidence ID and malformed validated terms fail with audit evidence. Missing PO, null or low-confidence terms and an out-of-tolerance total retain their real hold reasons.
@@ -21,14 +21,24 @@ Expected payment outcomes are explicit constants, not computed by the runtime un
 - Global and claimed-supplier ingestion caps, file size and transcript-cited-page limits reject excess before any ERP read. The cited-page test does not establish physical PDF page counting.
 - Rate admission waits within budget and stops before an extra send when the wait exceeds budget. Transient attempts consume the call cap and stop after three total attempts; server delays support seconds and HTTP-date values.
 - Deterministic denials and malformed calls do not retry. Output-parent symlinks are refused before creation; invoice identity survives logging while account numbers and IBAN values are masked.
-- Omitted instruction flags are recovered from curated quote/text evidence. This checks deterministic replay-text screening, not live PDF or image understanding.
+- Omitted instruction flags are recovered from the stored reading and from `.txt` source text during replay. This checks deterministic replay-text screening; the reader test covers reading the page itself.
+
+## Reader checks (`tests/test_reader.py`)
+
+- The reader runs with the socket module blocked and writes one transcript per golden invoice: the three PDFs from their text layer, the three PNGs by OCR.
+- After replay verification, all 42 field values equal the labels in `evals/golden/expected.json` under the grader's comparison, with no null value; the test prints the 6 by 7 table.
+- A quote appended to, re-cased or moved to another page quarantines that invoice while the untouched invoices are written.
+- Each field's confidence is the lowest recognizer score over the lines it quotes; text-layer fields record 1.0.
+- An image-only copy of each PDF (the page rendered at 200 dpi, no text layer) reads through the OCR path with the same 21 field values.
+- The injection PNG yields bank-change and instruction flags from its pixels, with the account masked.
+- The committed transcripts equal a fresh reader run: values, quotes and pages exactly, confidence within 0.02, the same flag types.
 
 ## Hardening regressions (`tests/test_hardening.py`)
 
 - The grader rejects a reason code outside the schema enum, or a valid code that does not match the labelled primary exception, on otherwise genuine output.
 - A supplier name whose legal form differs from the supplier record (Inc against Ltd) routes to supplier-or-remittance-mismatch in the decider and the checker; the same name with no suffix stays clear.
 - Look-alike Cyrillic letters, a declarative remit-to change and a moved treasury account are flagged; benign payment text is not.
-- A field quote absent from a `.txt` source quarantines the invoice; the untouched case is written.
+- A field quote absent from a `.txt` source quarantines the invoice; the untouched case is written. For PDF and image sources the same rule runs against the stored reading (`tests/test_reader.py`).
 - Crafted events piped into the PreToolUse hook are denied: a write tool, a secrets read (including `.ENV`, `.env.staging` and `.envrc`), a protected-path write in any letter case, a write outside the allowed paths, a server alias and malformed input; an allowed read passes through; development mode keeps the write tools, the nested model and the hook log denied.
 - Zero-width, soft-hyphen, combining and enclosing characters, a ligature, small capitals and control characters inside an instruction, between its words or both are flagged in the tested spellings, and the quote is cut from the original text. Layout variants (line wraps, double spaces, curly apostrophes, joined words, letter spacing, digits for letters, a long account or amount inside the keyword window, inflected verbs, either word order) and look-alike letters from six scripts are flagged in the tested spellings; the sample invoices' own wording is not.
 - A legal form wrapped in punctuation or invisible characters still counts; long spellings equal their short forms.
@@ -43,7 +53,7 @@ One-file-per-FR organization, duplicated parsing/discount examples already exerc
 
 ## Limits and release checks
 
-This is a bounded sandbox replay suite, not exhaustive coverage. Dedicated vendor/currency/tolerance boundary matrices, every policy-cap combination, physical PDF page counting, concurrent writers, additional grader branch permutations and checker amount/source mutation matrices, live OCR/model detection, supplier authentication, distributed rate/ingress quotas, and hostile-local-user filesystem races are not claimed tested. Golden labels and thresholds remain immutable.
+This is a bounded sandbox replay suite, not exhaustive coverage. Dedicated vendor/currency/tolerance boundary matrices, every policy-cap combination, physical PDF page counting, concurrent writers, additional grader branch permutations and checker amount/source mutation matrices, a vision model for unseen layouts, OCR on layouts other than the six fixtures, supplier authentication, distributed rate/ingress quotas, and hostile-local-user filesystem races are not claimed tested. Golden labels and thresholds remain immutable.
 
 Packaging is checked at release time: build an allowlisted ZIP, verify hashes/exclusions, unpack it, then run this same suite and strict checks. Visual copy changes receive render inspection, not new unit tests. The local application hook and production approval controls are separate concerns.
 

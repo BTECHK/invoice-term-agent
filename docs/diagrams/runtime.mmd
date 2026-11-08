@@ -1,5 +1,5 @@
 flowchart TD
-  IN[Extraction transcript + source document] --> R
+  IN[Invoice file] --> RD["Local reader (reader.py)"]
   subgraph R[Python runner: one process]
     L[Replay loader and validator] --> D[Rules and proposal]
     D --> C[Separate checker implementation]
@@ -7,6 +7,7 @@ flowchart TD
     C --> W[Bundle writer: lock, journal, idempotency]
     E --> W
   end
+  RD --> L
   D <-->|Fixed queries via adapter| M
   C <-->|Re-query via adapter| M
   E <-->|Declared evidence queries| M

@@ -1,6 +1,6 @@
 # Documentation index
 
-This folder is the design record for the accounts payable (AP) payment-term agent: what it must do, what it must never do, how it is built and what can go wrong. Every item has an identifier (ID), and requirements map to user stories and shared test scenarios or manual review evidence. Status: a sandbox replay proof of concept that prepares AP data for ingestion into an enterprise resource planning (ERP) system and a business intelligence (BI) system, plus a production proposal.
+This folder is the design record for the accounts payable (AP) payment-term agent: what it must do, what it must never do, how it is built and what can go wrong. Every item has an identifier (ID), and requirements map to user stories and shared test scenarios or manual review evidence. Status: a sandbox proof of concept that reads invoices with a local optical character recognition (OCR) reader, replays the transcripts and prepares AP data for ingestion into an enterprise resource planning (ERP) system and a business intelligence (BI) system, plus a production proposal.
 
 ## Five-minute path
 
@@ -51,7 +51,7 @@ Rules for IDs:
 | FR-001 | `test_workflow.py` | US-1 | UC-1 | BR-1 | | T-6 |
 | FR-002 | `test_workflow.py` | US-3 | UC-1 | BR-15 | ADR-004 | T-4, T-6 |
 | FR-003 | `test_workflow.py` | US-3 | UC-1 | BR-15 | | T-6 |
-| FR-004 | `test_workflow.py`; `tests/test_hardening.py` for the `.txt` quote check | US-15 | UC-1 | | ADR-001, ADR-004 | T-6, T-11 |
+| FR-004 | `tests/test_reader.py` for reader transcripts and hand-edited quotes; `test_workflow.py`; `tests/test_hardening.py` for the `.txt` quote check | US-15 | UC-1 | | ADR-001, ADR-004 | T-6, T-11 |
 | FR-005 | `test_controls.py` | US-13 | UC-1, UC-2 | BR-18 | ADR-002 | T-5, T-7 |
 | FR-006 | Code review: SAP match facts are copied | US-1 | UC-1 | BR-18 | ADR-002 | |
 | FR-007 | Code review: PO-selected supplier record and company code; `tests/test_hardening.py` for the legal form check | US-1 | UC-1, UC-2 | BR-2 | | T-1 |
@@ -82,6 +82,7 @@ Rules for IDs:
 | FR-032 | `test_workflow.py`; `tests/test_hardening.py` for look-alike folding | US-14 | UC-1, UC-2 | BR-13 | ADR-002 | T-4, T-5 |
 | FR-033 | `test_workflow.py`; `tests/test_hardening.py` for forged reason codes | US-6, US-15 | UC-1 | | ADR-005 | T-8, T-11 |
 | FR-034 | `test_workflow.py` | US-15 | UC-1 | | ADR-004 | T-11 |
+| FR-035 | `tests/test_reader.py` | US-15 | UC-1 | | | T-6 |
 
 ### Non-functional requirements and decisions
 

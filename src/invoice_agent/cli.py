@@ -1,8 +1,9 @@
-"""Offline command line runner for curated extraction replay and the stdio mock."""
+"""Offline command line runner: the local reader, extraction replay and the stdio mock."""
 from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import logging
 import sys
@@ -21,7 +22,7 @@ from .guard import mask_account_numbers
 from .models import EvidenceItem, MoneyImpact, WorklistRecord
 from .policy import load_policy
 from .propose import apply_checker, build_proposal, check_proposal
-from .worklist import BundleWriter, InputConflict, WriteFailure, semantic_input_hash
+from .worklist import BundleWriter, InputConflict, WriteFailure, _safe_invoice_id, semantic_input_hash
 
 DEFAULT_INPUTS = (
     "evals/golden/invoices/NBF-0051376.png",
@@ -43,7 +44,7 @@ def _arguments(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--transcripts", type=Path, default=REPO_ROOT / "transcripts")
     parser.add_argument("--fixtures", type=Path, default=REPO_ROOT / "mock_erp" / "fixtures")
     parser.add_argument("--inputs", type=Path)
-    parser.add_argument("--mode", choices=("curated_synthetic", "live"), default="curated_synthetic")
+    parser.add_argument("--mode", choices=("replay", "live"), default="replay")
     parser.add_argument("--live", action="store_true", help="unsupported; live execution is outside this build")
     return parser.parse_args(argv)
 
@@ -160,7 +161,7 @@ async def _run_one(
         "replay_extraction",
         {"source_sha256": replay.source_sha256},
         replay.extraction.model_dump(mode="json"),
-        note="curated synthetic replay verified against source bytes",
+        note=f"{replay.metadata['mode']} transcript verified against source bytes",
     )
     orchestrator_audit = AuditTrail(invoice_id, "orchestrator")
     orchestrator_budget = _budget(policy, "orchestrator")
@@ -368,8 +369,89 @@ async def run(args: argparse.Namespace) -> int:
     return await run_batch(args, root=REPO_ROOT, input_map=_input_map, run_one=_run_one)
 
 
+def _read_arguments(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="invoice-agent read",
+        description="Read PDF and image invoices offline with the local reader and write extractor transcripts.",
+    )
+    parser.add_argument("--inputs", type=Path, nargs="+", required=True, help="invoice files or folders of them")
+    parser.add_argument("--out", type=Path, required=True, help="transcripts folder: one <invoice id>/extractor.json per invoice")
+    return parser.parse_args(argv)
+
+
+def read_main(argv: list[str]) -> int:
+    """`invoice-agent read`: run the local reader over invoice files under the agent root and write transcripts."""
+    from .reader import IMAGE_SUFFIXES, ReadError, dump_transcript, extract, read_document, transcript
+
+    args = _read_arguments(argv)
+    policy = load_policy(REPO_ROOT)
+    files: list[Path] = []
+    for given in args.inputs:
+        if given.is_dir():
+            files.extend(sorted(p for p in given.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES | {".pdf"}))
+        elif given.is_file():
+            files.append(given)
+        else:
+            print(f"invoice-agent read: no such file or folder: {given}", file=sys.stderr)
+            return 2
+    if not files:
+        print("invoice-agent read: no PDF or image files found", file=sys.stderr)
+        return 2
+    failures = 0
+    for path in files:
+        resolved = path.resolve()
+        try:
+            relative = resolved.relative_to(REPO_ROOT.resolve()).as_posix()
+        except ValueError:
+            print(f"SKIP {path.name}: the file is outside the agent root {REPO_ROOT}", file=sys.stderr)
+            failures += 1
+            continue
+        if resolved.stat().st_size > policy.max_file_bytes:
+            print(f"SKIP {path.name}: larger than the {policy.max_file_bytes} byte cap", file=sys.stderr)
+            failures += 1
+            continue
+        try:
+            reading = read_document(resolved)
+            extraction = extract(reading)
+        except ReadError as exc:
+            print(f"FAIL {path.name}: {exc}", file=sys.stderr)
+            failures += 1
+            continue
+        invoice_id = extraction.invoice_id.value or path.stem
+        try:
+            folder = _safe_invoice_id(invoice_id)
+        except WriteFailure:
+            folder = path.stem
+        envelope = transcript(
+            reading, extraction,
+            source_path=relative,
+            source_sha256=hashlib.sha256(resolved.read_bytes()).hexdigest(),
+            rule_version=policy.rule_version,
+        )
+        target = args.out / folder / "extractor.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(dump_transcript(envelope), encoding="utf-8")
+        fields = extraction.model_dump(mode="json")
+        read = sum(1 for name in fields if name != "flags" and fields[name]["value"] is not None)
+        lowest = min(fields[name]["confidence"] for name in fields if name != "flags")
+        print(f"{folder}: {reading.mode}, {len(reading.lines)} lines, {read} of 7 fields, "
+              f"{len(extraction.flags)} flags, lowest confidence {lowest:.2f} -> {target}")
+        if extraction.invoice_id.value is None:
+            print(f"WARN {path.name}: no invoice id was read; the transcript sits under the file stem", file=sys.stderr)
+            failures += 1
+    return 1 if failures else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv[:1] == ["read"]:
+        try:
+            return read_main(argv[1:])
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(f"invoice-agent read: {safe_error(exc)}", file=sys.stderr)
+            return 1
     args = _arguments(argv)
     try:
         return asyncio.run(run(args))

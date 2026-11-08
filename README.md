@@ -1,8 +1,8 @@
-# Invoice Term Agent
+# OCR Invoice Term Agent
 
 An agent that checks the payment term printed on a supplier invoice against the purchase order (PO) and vendor master terms, then stages ingestion-ready records for the ERP and the business intelligence (BI) system. A person approves anything that changes the ERP.
 
-Status: sandbox proof of concept. It runs locally against a mock ERP data service and replayed extraction transcripts. It is not a production payment system.
+Status: sandbox proof of concept. It runs locally with a local OCR reader (RapidOCR PP-OCRv4 models shipped in the wheel, PyMuPDF text layer first) against a mock ERP data service. It is not a production payment system.
 
 ## Why this exists
 
@@ -19,7 +19,7 @@ Its output is the data-preparation step ahead of downstream ingestion: schema-bo
 
 ## What it does
 
-1. Validates seven extracted invoice fields (vendor, address, terms, value, company code, PO reference, invoice number), each with its quote, page and confidence, against the source document's hash.
+1. Reads the invoice with the local reader: the PDF text layer, or OCR with two recognition passes. It finds seven fields (vendor, address, terms, value, company code, PO reference, invoice number), each with its line quotes, page and confidence. Confidence is the lowest recognizer score over the quoted lines. The injection guard scans the full text of every page. Replay then validates the fields against the source document's hash and the lines the reader kept.
 2. Reads PO, vendor, event and validated-term facts through a fixed-query MCP adapter. The ERP stays responsible for the three-way match.
 3. Applies the term, discount, tolerance, supplier and control rules. A payment day is an offset from the baseline date; the ERP owns the due-date calculation.
 4. Gathers the trusted inputs again in a separate checker and recomputes. Any disagreement clears the proposed day and sends both values to review.
@@ -29,7 +29,8 @@ It never approves a proposal, changes a vendor record or PO, posts to the ERP, s
 
 ```mermaid
 flowchart TD
-  A[Invoice PDF or image + extraction transcript] --> B[Validate source hash, fields and envelope]
+  A[Invoice PDF or image] --> R[Read with the local reader<br/>text layer or RapidOCR<br/>transcript with its reading]
+  R --> B[Validate source hash, quotes against the reading, fields and envelope]
   B -->|Valid| C[Read ERP facts through fixed queries]
   B -->|Invalid| X[Audit the technical stop and quarantine the invoice]
   C --> D[Apply deterministic payment-term rules]
@@ -51,13 +52,16 @@ make PYTHON=.venv/bin/python demo
 make PYTHON=.venv/bin/python test
 make PYTHON=.venv/bin/python check
 make PYTHON=.venv/bin/python eval
+make PYTHON=.venv/bin/python read
 ```
+
+`make read` rewrites `transcripts/` from the six golden invoices; it takes about 10 seconds per OCR page and under a second for a text-layer PDF.
 
 No model key or ERP credential is needed. The CLI starts the mock ERP data service as a local stdio subprocess and refuses to switch to a live provider when a fixture is missing.
 
 ### What the sample runs show
 
-`make demo` runs five golden invoices and one injection case. They are rendered documents of different layouts: a freight invoice, a sidebar layout, a modern one-page invoice, an e-invoicing portal view and a serif letterhead, plus the injection case. Four of the five carry a term conflict a clerk would otherwise catch by hand; one is a clean case where all three terms agree and a payment day is proposed.
+`make demo` runs five golden invoices and one injection case. They are rendered documents of different layouts: a freight invoice, a sidebar layout, a modern one-page invoice, an e-invoicing portal view and a serif letterhead, plus the injection case. Four of the five carry a term conflict a clerk would otherwise catch by hand; one is a clean case where all three terms agree and a payment day is proposed. The three PDFs (KBP-2025-0417, RIC-250319-00718, FPC-25-10733) are read from their text layer and the three PNGs by OCR; the injection PNG's flags come from its pixels, with the printed account masked.
 
 | Invoice | Printed / PO / master term | Outcome |
 |---|---|---|
@@ -109,17 +113,18 @@ flowchart LR
 | Tool policy | `policy/tool-policy.yaml` | Per-role allow and deny lists, tools denied for every role, write and protected paths. It also declares step and cost caps and a trust ladder; the sandbox enforces the orchestrator's query-step cap, the rest is Design. |
 | Subagents | `.claude/agents/extractor.md`, `.claude/agents/checker.md` | The extractor has Read only, no MCP and 3 turns. The checker has read-only MCP, 8 turns and the instruction to disagree when in doubt. |
 | Skills | `skills/*/SKILL.md` | Seven exception playbooks, each declaring the only queries it may run. They are design-time documents: the runtime reads the declared query list and drafts from fixed templates. Mirrored to `.claude/skills` and `.agents/skills` by `scripts/sync-skills.py`. |
-| Model routing | `policy/models.yaml` | Tiers for the reader, the orchestrator and a checker from a different model family, with pinning and rollback rules. Design only; nothing calls a live model. |
+| Model routing | `policy/models.yaml` | Tiers for a live vision model, the orchestrator and a checker from a different model family, with pinning and rollback rules. Design only; nothing calls a live model. |
 | Query adapter | `src/invoice_agent/erp_client.py`, `integration/agent-tools.yaml` | Only validated read methods are public; only declared query ids, each variable checked against a pattern before substitution. Throttle, bounded retries and `Retry-After` handling. The model never writes a query. The contract is invented for the sandbox, not a description of any real service. |
 | Injection guard | `src/invoice_agent/guard.py` | Keyword scan for common English instruction, bank-change and remit-to phrasings. Before matching, the text is normalized: look-alike letters from Cyrillic, Greek, Armenian, Cherokee, Lisu, Georgian and the enclosed-letter series are folded to Latin, accents and ligatures are decomposed, hidden characters (format, combining and enclosing marks, non-whitespace controls, hair spaces) are read both as removed and as spaces, whitespace is collapsed, word-joining punctuation is read as a space, a single digit that commonly stands for a letter (0 1 3 4 5 7 8) is read as that letter between two letters, and account numbers are replaced by one placeholder so a long IBAN cannot exhaust a keyword window. Account masking recognizes an IBAN by its registered country code and exact length, in any letter case, with at least five digits in its body, printed as one block or in groups of four (any other grouping, a glued label or a glued currency code must also pass the check digits), and masks runs of eight or more digits. It is a heuristic, not a detector of every paraphrase. A dedicated injection invoice is in the eval set. |
 | Supplier identity | `src/invoice_agent/decide.py`, `src/invoice_agent/propose.py` | The PO reference, not the printed name, selects the supplier record. The printed name is compared suffix-insensitively, and a changed legal form (Inc to Ltd) routes to review in both the decider and the checker. |
-| Provenance | `src/invoice_agent/extract.py` | Each transcript is bound to its document by SHA-256. For text sources every quote must occur in the source or the invoice is quarantined; image and PDF quotes are curated provenance, not verified text. |
+| Reader | `src/invoice_agent/reader.py` | A local, offline reader: no model key, no network call, nothing downloaded at run time. A PDF page with a text layer of at least 50 characters is read from the PyMuPDF layer at confidence 1.0. A scan (rendered at 200 dpi) or an image goes through RapidOCR with the PP-OCRv4 mobile ONNX models shipped in the hash-locked `rapidocr-onnxruntime` 1.4.4 wheel. Each OCR page is recognized twice, as supplied and scaled to a 3500 px long side; per line the reading with more spaces wins, then the higher score. OCR text is normalized: dropped word boundaries are re-opened, the recognizer's letter o inside an IBAN is read as the digit 0, and a mixed-case legal form is re-cased from the repository's legal-form table. Seven fields come from label-anchored parsers with page positions. Field confidence is the lowest recognizer score over the quoted lines. The guard scans the full text of every page the reader kept. OCR text is untrusted data like any invoice text. The parsers are tuned to the labelled layouts of the six-invoice eval set, so recall on other layouts is unknown; an unknown layout leaves fields null and the invoice is held. Scores may differ slightly on another CPU or platform. |
+| Provenance | `src/invoice_agent/extract.py` | Each transcript is bound to its document by SHA-256. For text sources every quote must occur in the source or the invoice is quarantined. For PDF and image sources the transcript must be reader output with its reading, and every quote is verified against the lines the reader kept, in reading order on their page, with the value inside the quote. A quote edited by hand, moved to another page or stitched from text the reader never kept is quarantined. The reading is bound to the source by the hash and reproduced by the reader test; it is not re-recognized on every replay. Replay re-scans the stored reading page by page with the guard, so flags are recovered even if the transcript's own flags list was edited away. |
 | Schemas | `schemas/*.json`, `src/invoice_agent/models.py` | Strict JSON Schema 2020-12 with Pydantic mirrors and cross-field rules, such as an exception never carrying a payment day. |
 | Writer | `src/invoice_agent/worklist.py`, `src/invoice_agent/audit.py` | File lock, journal and recovery, idempotency by input hash, redacted, hashed audit events. The free-text fields (vendor name, address, payment terms) are masked before results are written, and the writer refuses a proposal, worklist record or result that still carries a full IBAN (registered country code and exact length, in any letter case; check digits verified when glued to other text or printed in a grouping other than fours). |
 | Evals | `evals/grade.py`, `evals/thresholds.json` | Code graders that recompute truth independently of `src/`. Six gates, each at 1.0. A reason code must be in the schema enum and match the labelled primary exception. The graded set is the five golden invoices and the injection case; the synthetic clear-path cases are covered by the tests. |
 | Drift lint | `scripts/check.py` | Policy against settings against the tool contract against the subagent files, the hook wired in settings, the full deny list present, skill mirrors, schema validity, floating model pins, secret patterns. |
 | CI | `.github/workflows/` | SHA-pinned actions, least-privilege tokens, gitleaks over full history with a checksum-verified binary, zizmor, hash-locked dependencies. |
-| Tests | `tests/` | Behaviour tests drive the real CLI and the real stdio MCP server. The hardening tests pipe crafted events into the hook, forge grader input, swap a supplier's legal form, feed look-alike and invisible-character injection text, and check that outputs never carry a full IBAN. |
+| Tests | `tests/` | Behaviour tests drive the real CLI and the real stdio MCP server. The hardening tests pipe crafted events into the hook, forge grader input, swap a supplier's legal form, feed look-alike and invisible-character injection text, and check that outputs never carry a full IBAN. The reader tests run the local OCR reader over the six golden invoices with the network blocked, compare all 42 field values with the labels and the committed transcripts with a fresh run, read image-only copies of the PDFs through OCR, and quarantine a hand-edited quote. |
 
 The [threat model](docs/06-threat-model.md) maps each of its threats to the file that enforces the control and the check that proves it. [AGENTS.md](AGENTS.md) carries the anti-rationalization table that coding agents read before changing anything.
 
@@ -138,7 +143,7 @@ The runner quarantines invoice-scoped replay, validation, arithmetic, step-cap a
 
 ## Built versus Design
 
-Built and tested here: extraction validation, the fixed-query adapter, the rules, the independent checker, the exception skills, the worklist and audit writer, the CLI, the eval graders and the harness. Design only: live extraction with a model, a genuine different-family model checker, authenticated human approval, the ERP write path and payment release. The [write path](integration/write-path.md) describes how approved changes would reach the ERP. Local worklist and audit files stand in for production storage and are not tamper-proof against the file owner.
+Built and tested here: local extraction with the OCR reader, extraction validation, the fixed-query adapter, the rules, the independent checker, the exception skills, the worklist and audit writer, the CLI, the eval graders and the harness. Design only: a live vision model for unseen layouts, a genuine different-family model checker, authenticated human approval, the ERP write path and payment release. The [write path](integration/write-path.md) describes how approved changes would reach the ERP. Local worklist and audit files stand in for production storage and are not tamper-proof against the file owner.
 
 ## Map
 
@@ -150,13 +155,13 @@ Built and tested here: extraction validation, the fixed-query adapter, the rules
 | `docs/06-threat-model.md` | STRIDE plus injection, tool-permission and data-leak lenses |
 | `docs/redundancy-ledger.md` | What the ERP and BI platforms already do, and what the agent adds |
 | `docs/diagrams/` | Harness, pipeline, runtime and target-process diagrams |
-| `src/invoice_agent/` | Extraction, adapter, rules, checker, worklist, audit and CLI |
+| `src/invoice_agent/` | Reader, extraction, adapter, rules, checker, worklist, audit and CLI |
 | `mock_erp/` | Local MCP server that reads fixtures and refuses writes |
 | `integration/` | Read contract and downstream write path |
 | `schemas/`, `policy/` | Strict schemas; roles, caps, term rules and model routing |
 | `skills/` | Exception playbooks |
 | `evals/` | Golden invoices, injection case, synthetic cases and grader |
-| `transcripts/` | Extraction envelopes with source hashes and provenance |
+| `transcripts/` | Reader output: envelopes with source hashes, provenance and readings |
 
 The sample invoices, vendors and figures are fictional.
 

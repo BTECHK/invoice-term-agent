@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "invoice-term-agent"
 version = "0.1.0"
-description = "Invoice payment-term agent that stages ingestion-ready AP records for ERP and BI systems (sandbox proof of concept)"
+description = "OCR invoice payment-term agent: reads supplier invoices with a local OCR reader, checks the printed term against PO and vendor master terms and stages ingestion-ready AP records for ERP and BI systems (sandbox proof of concept)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "anyio==4.15.1",
@@ -13,6 +13,8 @@ dependencies = [
     "mcp==2.3.0",
     "mcp-types==2.3.0",
     "pydantic==2.14.1",
+    "pymupdf==2.1",
+    "rapidocr-onnxruntime==1.4.4",
 ]
 
 [project.optional-dependencies]
